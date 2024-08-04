@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+uhoh help uhoh-dsl 2>&1
