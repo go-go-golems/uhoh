@@ -1,0 +1,22 @@
+name: Snake Health Check
+theme: Default
+groups:
+  - name: Health Information
+    fields:
+      - type: input
+        key: weight
+        title: Weight (grams)
+        validation:
+          - condition: "parseInt(value) <= 0"
+            error: Please enter a positive number
+      - type: input
+        key: length
+        title: Length (cm)
+        validation:
+          - condition: "parseInt(value) <= 0"
+            error: Please enter a positive number
+      - type: text
+        key: health_notes
+        title: Health Notes
+        attributes:
+          char_limit: 500

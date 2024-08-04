@@ -1,0 +1,31 @@
+name: Snake Habitat Setup
+theme: Default
+groups:
+  - name: Habitat Details
+    fields:
+      - type: input
+        key: tank_size
+        title: Tank Size (gallons)
+        validation:
+          - condition: "parseInt(value) <= 0"
+            error: Please enter a positive number
+      - type: multiselect
+        key: accessories
+        title: Accessories
+        options:
+          - label: Heat Lamp
+            value: heat_lamp
+          - label: Water Bowl
+            value: water_bowl
+          - label: Hiding Spot
+            value: hiding_spot
+          - label: Climbing Branch
+            value: climbing_branch
+        attributes:
+          limit: 3
+      - type: confirm
+        key: temperature_control
+        title: Do you have a temperature control system?
+        attributes:
+          affirmative: Yes
+          negative: No

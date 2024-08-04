@@ -1,0 +1,14 @@
+name: snake-info
+short: Snake Information Form
+form:
+  name: Snake Information Form
+  theme: Default
+  groups:
+    - name: Basic Information
+      fields:
+        - type: input
+          key: snake_name
+          title: Snake Name
+        - type: input
+          key: species
+          title: Species
