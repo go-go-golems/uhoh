@@ -1,4 +1,4 @@
-project_name: XXX
+project_name: uhoh
 
 before:
   hooks:
@@ -9,8 +9,8 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
-    main: ./cmd/XXX
-    binary: XXX
+    main: ./cmd/uhoh
+    binary: uhoh
     goos:
       - linux
 # I am not able to test windows at the time
@@ -27,9 +27,9 @@ changelog:
       - '^docs:'
       - '^test:'
 brews:
-  - name: XXX
-    description: "XXX is a tool"
-    homepage: "https://github.com/go-go-golems/XXX"
+  - name: uhoh
+    description: "uhoh is a tool to build TUI forms and wizards"
+    homepage: "https://github.com/go-go-golems/uhoh"
     tap:
       owner: go-go-golems
       name: homebrew-go-go-go
@@ -44,7 +44,7 @@ nfpms:
     maintainer: Manuel Odendahl <wesen@ruinwesen.com>
 
     description: |-
-      XXX is a tool
+      uhoh is a tool to build TUI forms and wizards
 
     license: MIT
 
