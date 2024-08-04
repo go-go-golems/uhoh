@@ -30,7 +30,7 @@ brews:
   - name: uhoh
     description: "uhoh is a tool to build TUI forms and wizards"
     homepage: "https://github.com/go-go-golems/uhoh"
-    tap:
+    repository:
       owner: go-go-golems
       name: homebrew-go-go-go
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
