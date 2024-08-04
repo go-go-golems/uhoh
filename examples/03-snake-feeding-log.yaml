@@ -1,26 +1,38 @@
-name: Snake Feeding Log
-theme: Default
-groups:
-  - name: Feeding Details
-    fields:
-      - type: input
-        key: date
-        title: Feeding Date
-      - type: select
-        key: food_type
-        title: Type of Food
-        options:
-          - label: Mice
-            value: mice
-          - label: Rats
-            value: rats
-          - label: Birds
-            value: birds
-          - label: Other
-            value: other
-      - type: input
-        key: quantity
-        title: Quantity
-        validation:
-          - condition: "parseInt(value) <= 0"
-            error: Please enter a positive number
+name: snake-feeding-log
+short: Snake Feeding Log Form
+form:
+  name: Snake Feeding Log
+  theme: Default
+  groups:
+    - name: Feeding Details
+      fields:
+        - type: input
+          key: date
+          title: Feeding Date
+          attributes:
+            placeholder: "YYYY-MM-DD"
+            char_limit: 10
+        - type: select
+          key: food_type
+          title: Type of Food
+          options:
+            - label: Mice
+              value: mice
+            - label: Rats
+              value: rats
+            - label: Birds
+              value: birds
+            - label: Other
+              value: other
+          attributes:
+            inline: true
+            filterable: true
+        - type: input
+          key: quantity
+          title: Quantity
+          validation:
+            - condition: "parseInt(value) <= 0"
+              error: Please enter a positive number
+          attributes:
+            placeholder: "e.g., 2"
+            char_limit: 3

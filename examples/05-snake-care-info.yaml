@@ -1,82 +1,112 @@
-name: Comprehensive Snake Care Form
-theme: Charm
-accessible: true
-groups:
-  - name: Basic Information
-    fields:
-      - type: input
-        key: snake_name
-        title: Snake Name
-      - type: input
-        key: species
-        title: Species
-  - name: Health Information
-    fields:
-      - type: input
-        key: weight
-        title: Weight (grams)
-        validation:
-          - condition: "parseInt(value) <= 0"
-            error: Please enter a positive number
-      - type: input
-        key: length
-        title: Length (cm)
-        validation:
-          - condition: "parseInt(value) <= 0"
-            error: Please enter a positive number
-      - type: text
-        key: health_notes
-        title: Health Notes
-        attributes:
-          char_limit: 500
-  - name: Feeding Log
-    fields:
-      - type: input
-        key: date
-        title: Feeding Date
-      - type: select
-        key: food_type
-        title: Type of Food
-        options:
-          - label: Mice
-            value: mice
-          - label: Rats
-            value: rats
-          - label: Birds
-            value: birds
-          - label: Other
-            value: other
-      - type: input
-        key: quantity
-        title: Quantity
-        validation:
-          - condition: "parseInt(value) <= 0"
-            error: Please enter a positive number
-  - name: Habitat Setup
-    fields:
-      - type: input
-        key: tank_size
-        title: Tank Size (gallons)
-        validation:
-          - condition: "parseInt(value) <= 0"
-            error: Please enter a positive number
-      - type: multiselect
-        key: accessories
-        title: Accessories
-        options:
-          - label: Heat Lamp
-            value: heat_lamp
-          - label: Water Bowl
-            value: water_bowl
-          - label: Hiding Spot
-            value: hiding_spot
-          - label: Climbing Branch
-            value: climbing_branch
-        attributes:
-          limit: 3
-      - type: confirm
-        key: temperature_control
-        title: Do you have a temperature control system?
-        attributes:
-          affirmative: Yes
-          negative: No
+name: snake-care-info
+short: Comprehensive Snake Care Form
+form:
+  name: Comprehensive Snake Care Form
+  theme: Charm
+  groups:
+    - name: Basic Information
+      fields:
+        - type: input
+          key: snake_name
+          title: Snake Name
+          attributes:
+            placeholder: "e.g., Slytherin"
+            char_limit: 30
+        - type: input
+          key: species
+          title: Species
+          attributes:
+            placeholder: "e.g., Ball Python"
+            char_limit: 50
+    - name: Health Information
+      fields:
+        - type: input
+          key: weight
+          title: Weight (grams)
+          validation:
+            - condition: "parseInt(value) <= 0"
+              error: Please enter a positive number
+          attributes:
+            placeholder: "e.g., 1500"
+            char_limit: 6
+        - type: input
+          key: length
+          title: Length (cm)
+          validation:
+            - condition: "parseInt(value) <= 0"
+              error: Please enter a positive number
+          attributes:
+            placeholder: "e.g., 150"
+            char_limit: 5
+        - type: text
+          key: health_notes
+          title: Health Notes
+          attributes:
+            char_limit: 500
+            lines: 4
+            show_line_numbers: true
+    - name: Feeding Log
+      fields:
+        - type: input
+          key: date
+          title: Feeding Date
+          attributes:
+            placeholder: "YYYY-MM-DD"
+            char_limit: 10
+        - type: select
+          key: food_type
+          title: Type of Food
+          options:
+            - label: Mice
+              value: mice
+            - label: Rats
+              value: rats
+            - label: Birds
+              value: birds
+            - label: Other
+              value: other
+          attributes:
+            inline: true
+            filterable: true
+        - type: input
+          key: quantity
+          title: Quantity
+          validation:
+            - condition: "parseInt(value) <= 0"
+              error: Please enter a positive number
+          attributes:
+            placeholder: "e.g., 2"
+            char_limit: 3
+    - name: Habitat Setup
+      fields:
+        - type: input
+          key: tank_size
+          title: Tank Size (gallons)
+          validation:
+            - condition: "parseInt(value) <= 0"
+              error: Please enter a positive number
+          attributes:
+            placeholder: "e.g., 20"
+            char_limit: 4
+        - type: multiselect
+          key: accessories
+          title: Accessories
+          options:
+            - label: Heat Lamp
+              value: heat_lamp
+            - label: Water Bowl
+              value: water_bowl
+            - label: Hiding Spot
+              value: hiding_spot
+            - label: Climbing Branch
+              value: climbing_branch
+          attributes:
+            limit: 3
+            filterable: true
+            height: 4
+        - type: confirm
+          key: temperature_control
+          title: Do you have a temperature control system?
+          attributes:
+            affirmative: Yes, I have one
+            negative: No, not yet

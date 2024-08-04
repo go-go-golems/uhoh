@@ -9,6 +9,20 @@ form:
         - type: input
           key: snake_name
           title: Snake Name
+          attributes:
+            placeholder: e.g., Slytherin
         - type: input
           key: species
           title: Species
+          attributes:
+            placeholder: e.g., Python regius
+        - type: select
+          key: venom_status
+          title: Venom Status
+          options:
+            - label: Non-venomous
+              value: non_venomous
+            - label: Mildly venomous
+              value: mildly_venomous
+            - label: Highly venomous
+              value: highly_venomous
