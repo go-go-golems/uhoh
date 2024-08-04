@@ -7,12 +7,18 @@ import (
 	"syscall"
 
 	"github.com/go-go-golems/uhoh/pkg"
+	"github.com/go-go-golems/uhoh/pkg/cmds"
 	"github.com/go-go-golems/uhoh/pkg/doc"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
 	clay "github.com/go-go-golems/clay/pkg"
+	"github.com/go-go-golems/glazed/pkg/cli"
+	glazed_cmds "github.com/go-go-golems/glazed/pkg/cmds"
+	"github.com/go-go-golems/glazed/pkg/cmds/alias"
+	"github.com/go-go-golems/glazed/pkg/cmds/loaders"
 	"github.com/go-go-golems/glazed/pkg/help"
+	"github.com/pkg/errors"
 	"github.com/pkg/profile"
 	"github.com/rs/zerolog/log"
 )
@@ -107,6 +113,16 @@ groups:
 	}
 }
 
+var runCommandCmd = &cobra.Command{
+	Use:   "run-command",
+	Short: "Run a command from a file",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		err := handleRunCommand()
+		cobra.CheckErr(err)
+	},
+}
+
 func main() {
 	helpSystem := help.NewHelpSystem()
 	err := doc.AddDocToHelpSystem(helpSystem)
@@ -114,10 +130,54 @@ func main() {
 
 	helpSystem.SetupCobraRootCommand(rootCmd)
 
+	rootCmd.AddCommand(runCommandCmd)
 	rootCmd.AddCommand(ExampleCommand())
 
 	rootCmd.PersistentFlags().Bool("mem-profile", false, "Enable memory profiling")
 
+	if len(os.Args) >= 3 && os.Args[1] == "run-command" && os.Args[2] != "--help" {
+		err := handleRunCommand()
+		cobra.CheckErr(err)
+		return
+	}
+
 	err = rootCmd.Execute()
 	cobra.CheckErr(err)
+}
+
+func handleRunCommand() error {
+	loader := &cmds.UhohCommandLoader{} // Assuming you have a UhohCommandLoader
+
+	fs_, filePath, err := loaders.FileNameToFsFilePath(os.Args[2])
+	if err != nil {
+		return errors.Wrap(err, "could not get absolute path")
+	}
+
+	cmds_, err := loaders.LoadCommandsFromFS(fs_, filePath, os.Args[2], loader, []glazed_cmds.CommandDescriptionOption{}, []alias.Option{})
+	if err != nil {
+		return errors.Wrap(err, "could not load command")
+	}
+
+	if len(cmds_) != 1 {
+		return errors.Errorf("expected exactly one command, got %d", len(cmds_))
+	}
+
+	cobraCommand, err := cli.BuildCobraCommandFromCommand(cmds_[0])
+	if err != nil {
+		return errors.Wrap(err, "could not build cobra command")
+	}
+
+	helpSystem := help.NewHelpSystem()
+	err = doc.AddDocToHelpSystem(helpSystem)
+	if err != nil {
+		return errors.Wrap(err, "could not add doc to help system")
+	}
+
+	helpSystem.SetupCobraRootCommand(rootCmd)
+
+	rootCmd.AddCommand(cobraCommand)
+	restArgs := os.Args[3:]
+	os.Args = append([]string{os.Args[0], cobraCommand.Use}, restArgs...)
+
+	return rootCmd.Execute()
 }
