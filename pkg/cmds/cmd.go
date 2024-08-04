@@ -6,21 +6,9 @@ import (
 
 	glazedcmds "github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"github.com/go-go-golems/uhoh/pkg"
 	"gopkg.in/yaml.v2"
 )
-
-type UhohCommandDescription struct {
-	Name      string                            `yaml:"name"`
-	Short     string                            `yaml:"short"`
-	Long      string                            `yaml:"long,omitempty"`
-	Flags     []*parameters.ParameterDefinition `yaml:"flags,omitempty"`
-	Arguments []*parameters.ParameterDefinition `yaml:"arguments,omitempty"`
-	Layers    []layers.ParameterLayer           `yaml:"layers,omitempty"`
-
-	Form *pkg.Form `yaml:"form"`
-}
 
 type UhohCommand struct {
 	*glazedcmds.CommandDescription `yaml:",inline"`

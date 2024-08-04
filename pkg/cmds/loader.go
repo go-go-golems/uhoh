@@ -1,13 +1,17 @@
 package cmds
 
 import (
-	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/alias"
-	"github.com/go-go-golems/glazed/pkg/cmds/loaders"
-	"gopkg.in/yaml.v2"
+	"github.com/go-go-golems/glazed/pkg/cmds/layers"
+	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"io"
 	"io/fs"
 	"strings"
+
+	"github.com/go-go-golems/glazed/pkg/cmds"
+	"github.com/go-go-golems/glazed/pkg/cmds/alias"
+	"github.com/go-go-golems/glazed/pkg/cmds/loaders"
+	"github.com/go-go-golems/uhoh/pkg"
+	"gopkg.in/yaml.v3"
 )
 
 type UhohCommandLoader struct{}
@@ -18,6 +22,38 @@ func (u *UhohCommandLoader) IsFileSupported(f fs.FS, fileName string) bool {
 
 var _ loaders.CommandLoader = (*UhohCommandLoader)(nil)
 
+// Add this new type
+type fieldWithRawAttributes struct {
+	Type        string            `yaml:"type"`
+	Key         string            `yaml:"key,omitempty"`
+	Title       string            `yaml:"title,omitempty"`
+	Description string            `yaml:"description,omitempty"`
+	Value       interface{}       `yaml:"value,omitempty"`
+	Options     []*pkg.Option     `yaml:"options,omitempty"`
+	Validation  []*pkg.Validation `yaml:"validation,omitempty"`
+	Attributes  yaml.Node         `yaml:"attributes,omitempty"`
+}
+
+type UhohCommandDescription struct {
+	Name      string                            `yaml:"name"`
+	Short     string                            `yaml:"short"`
+	Long      string                            `yaml:"long,omitempty"`
+	Flags     []*parameters.ParameterDefinition `yaml:"flags,omitempty"`
+	Arguments []*parameters.ParameterDefinition `yaml:"arguments,omitempty"`
+	Layers    []layers.ParameterLayer           `yaml:"layers,omitempty"`
+	Form      struct {
+		Name       string `yaml:"name,omitempty"`
+		Theme      string `yaml:"theme,omitempty"`
+		Accessible bool   `yaml:"accessible,omitempty"`
+
+		Groups []struct {
+			Name   string                   `yaml:"name,omitempty"`
+			Fields []fieldWithRawAttributes `yaml:"fields"`
+		} `yaml:"groups"`
+	} `yaml:"form"`
+}
+
+// Modify the loadUhohCommandFromReader function
 func (u *UhohCommandLoader) loadUhohCommandFromReader(
 	s io.Reader,
 	options []cmds.CommandDescriptionOption,
@@ -28,10 +64,33 @@ func (u *UhohCommandLoader) loadUhohCommandFromReader(
 		return nil, err
 	}
 
-	ucd := &UhohCommandDescription{}
-	err = yaml.Unmarshal(yamlContent, ucd)
+	ucd := UhohCommandDescription{}
+
+	err = yaml.Unmarshal(yamlContent, &ucd)
 	if err != nil {
 		return nil, err
+	}
+
+	form := &pkg.Form{
+		Name:       ucd.Form.Name,
+		Theme:      ucd.Form.Theme,
+		Accessible: ucd.Form.Accessible,
+		Groups:     make([]*pkg.Group, len(ucd.Form.Groups)),
+	}
+
+	// Process the fields and convert the raw attributes to the correct type
+	for i, group := range ucd.Form.Groups {
+		form.Groups[i] = &pkg.Group{
+			Name:   group.Name,
+			Fields: make([]*pkg.Field, len(group.Fields)),
+		}
+		for j, field := range group.Fields {
+			processedField, err := processField(field)
+			if err != nil {
+				return nil, err
+			}
+			form.Groups[i].Fields[j] = &processedField
+		}
 	}
 
 	options_ := []cmds.CommandDescriptionOption{
@@ -47,7 +106,7 @@ func (u *UhohCommandLoader) loadUhohCommandFromReader(
 		options_...,
 	)
 
-	uc, err := NewUhohCommand(description, ucd.Form)
+	uc, err := NewUhohCommand(description, form)
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +116,66 @@ func (u *UhohCommandLoader) loadUhohCommandFromReader(
 	}
 
 	return []cmds.Command{uc}, nil
+}
+
+// Add this new function
+func processField(field fieldWithRawAttributes) (pkg.Field, error) {
+	processedField := pkg.Field{
+		Type:        field.Type,
+		Key:         field.Key,
+		Title:       field.Title,
+		Description: field.Description,
+		Value:       field.Value,
+		Options:     field.Options,
+		Validation:  field.Validation,
+	}
+
+	switch field.Type {
+	case "input":
+		var attrs pkg.InputAttributes
+		if err := field.Attributes.Decode(&attrs); err != nil {
+			return pkg.Field{}, err
+		}
+		processedField.InputAttributes = &attrs
+	case "text":
+		var attrs pkg.TextAttributes
+		if err := field.Attributes.Decode(&attrs); err != nil {
+			return pkg.Field{}, err
+		}
+		processedField.TextAttributes = &attrs
+	case "select":
+		var attrs pkg.SelectAttributes
+		if err := field.Attributes.Decode(&attrs); err != nil {
+			return pkg.Field{}, err
+		}
+		processedField.SelectAttributes = &attrs
+	case "multiselect":
+		var attrs pkg.MultiSelectAttributes
+		if err := field.Attributes.Decode(&attrs); err != nil {
+			return pkg.Field{}, err
+		}
+		processedField.MultiSelectAttributes = &attrs
+	case "confirm":
+		var attrs pkg.ConfirmAttributes
+		if err := field.Attributes.Decode(&attrs); err != nil {
+			return pkg.Field{}, err
+		}
+		processedField.ConfirmAttributes = &attrs
+	case "note":
+		var attrs pkg.NoteAttributes
+		if err := field.Attributes.Decode(&attrs); err != nil {
+			return pkg.Field{}, err
+		}
+		processedField.NoteAttributes = &attrs
+	case "filepicker":
+		var attrs pkg.FilePickerAttributes
+		if err := field.Attributes.Decode(&attrs); err != nil {
+			return pkg.Field{}, err
+		}
+		processedField.FilePickerAttributes = &attrs
+	}
+
+	return processedField, nil
 }
 
 func (u *UhohCommandLoader) LoadCommands(

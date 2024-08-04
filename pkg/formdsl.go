@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 )
@@ -19,13 +20,20 @@ type Group struct {
 }
 
 type Field struct {
-	Type       string        `yaml:"type"`
-	Key        string        `yaml:"key,omitempty"`
-	Title      string        `yaml:"title,omitempty"`
-	Value      interface{}   `yaml:"value,omitempty"`
-	Options    []*Option     `yaml:"options,omitempty"`
-	Validation []*Validation `yaml:"validation,omitempty"`
-	Attributes *Attributes   `yaml:"attributes,omitempty"`
+	Type                  string                 `yaml:"type"`
+	Key                   string                 `yaml:"key,omitempty"`
+	Title                 string                 `yaml:"title,omitempty"`
+	Description           string                 `yaml:"description,omitempty"`
+	Value                 interface{}            `yaml:"value,omitempty"`
+	Options               []*Option              `yaml:"options,omitempty"`
+	Validation            []*Validation          `yaml:"validation,omitempty"`
+	InputAttributes       *InputAttributes       `yaml:"attributes,omitempty"`
+	TextAttributes        *TextAttributes        `yaml:"attributes,omitempty"`
+	SelectAttributes      *SelectAttributes      `yaml:"attributes,omitempty"`
+	MultiSelectAttributes *MultiSelectAttributes `yaml:"attributes,omitempty"`
+	ConfirmAttributes     *ConfirmAttributes     `yaml:"attributes,omitempty"`
+	NoteAttributes        *NoteAttributes        `yaml:"attributes,omitempty"`
+	FilePickerAttributes  *FilePickerAttributes  `yaml:"attributes,omitempty"`
 }
 
 type Option struct {
@@ -38,13 +46,55 @@ type Validation struct {
 	Error     string `yaml:"error"`
 }
 
-type Attributes struct {
+type InputAttributes struct {
 	Prompt      string `yaml:"prompt,omitempty"`
-	Limit       int    `yaml:"limit,omitempty"`
+	CharLimit   int    `yaml:"char_limit,omitempty"`
+	Placeholder string `yaml:"placeholder,omitempty"`
+	EchoMode    string `yaml:"echo_mode,omitempty"`
+}
+
+type TextAttributes struct {
+	Lines           int      `yaml:"lines,omitempty"`
+	CharLimit       int      `yaml:"char_limit,omitempty"`
+	ShowLineNumbers bool     `yaml:"show_line_numbers,omitempty"`
+	Placeholder     string   `yaml:"placeholder,omitempty"`
+	Editor          string   `yaml:"editor,omitempty"`
+	EditorArgs      []string `yaml:"editor_args,omitempty"`
+	EditorExtension string   `yaml:"editor_extension,omitempty"`
+}
+
+type SelectAttributes struct {
+	Inline     bool `yaml:"inline,omitempty"`
+	Height     int  `yaml:"height,omitempty"`
+	Filterable bool `yaml:"filterable,omitempty"`
+}
+
+type MultiSelectAttributes struct {
+	Limit      int  `yaml:"limit,omitempty"`
+	Height     int  `yaml:"height,omitempty"`
+	Filterable bool `yaml:"filterable,omitempty"`
+}
+
+type ConfirmAttributes struct {
 	Affirmative string `yaml:"affirmative,omitempty"`
 	Negative    string `yaml:"negative,omitempty"`
-	Height      int    `yaml:"height,omitempty"`
-	CharLimit   int    `yaml:"char_limit,omitempty"`
+}
+
+type NoteAttributes struct {
+	Height         int    `yaml:"height,omitempty"`
+	ShowNextButton bool   `yaml:"show_next_button,omitempty"`
+	NextLabel      string `yaml:"next_label,omitempty"`
+}
+
+type FilePickerAttributes struct {
+	CurrentDirectory string   `yaml:"current_directory,omitempty"`
+	ShowHidden       bool     `yaml:"show_hidden,omitempty"`
+	ShowSize         bool     `yaml:"show_size,omitempty"`
+	ShowPermissions  bool     `yaml:"show_permissions,omitempty"`
+	FileAllowed      bool     `yaml:"file_allowed,omitempty"`
+	DirAllowed       bool     `yaml:"dir_allowed,omitempty"`
+	AllowedTypes     []string `yaml:"allowed_types,omitempty"`
+	Height           int      `yaml:"height,omitempty"`
 }
 
 type FieldWithValidation interface {
@@ -114,6 +164,25 @@ func (f *Form) Run() (map[string]interface{}, error) {
 				input := huh.NewInput().
 					Title(field.Title).
 					Value(&value)
+				if field.InputAttributes != nil {
+					if field.InputAttributes.Prompt != "" {
+						input = input.Prompt(field.InputAttributes.Prompt)
+					}
+					if field.InputAttributes.CharLimit > 0 {
+						input = input.CharLimit(field.InputAttributes.CharLimit)
+					}
+					if field.InputAttributes.Placeholder != "" {
+						input = input.Placeholder(field.InputAttributes.Placeholder)
+					}
+					if field.InputAttributes.EchoMode != "" {
+						switch field.InputAttributes.EchoMode {
+						case "password":
+							input = input.EchoMode(huh.EchoModePassword)
+						case "none":
+							input = input.EchoMode(huh.EchoModeNone)
+						}
+					}
+				}
 				huhField = input
 				values[field.Key] = &value
 			case "text":
@@ -121,31 +190,122 @@ func (f *Form) Run() (map[string]interface{}, error) {
 				text := huh.NewText().
 					Title(field.Title).
 					Value(&value)
+				if field.TextAttributes != nil {
+					if field.TextAttributes.Lines > 0 {
+						text = text.Lines(field.TextAttributes.Lines)
+					}
+					if field.TextAttributes.CharLimit > 0 {
+						text = text.CharLimit(field.TextAttributes.CharLimit)
+					}
+					text = text.ShowLineNumbers(field.TextAttributes.ShowLineNumbers)
+					if field.TextAttributes.Placeholder != "" {
+						text = text.Placeholder(field.TextAttributes.Placeholder)
+					}
+					if field.TextAttributes.Editor != "" {
+						text = text.Editor(field.TextAttributes.Editor)
+					}
+					if len(field.TextAttributes.EditorArgs) > 0 {
+						text = text.EditorExtension(strings.Join(field.TextAttributes.EditorArgs, " "))
+					}
+					if field.TextAttributes.EditorExtension != "" {
+						text = text.EditorExtension(field.TextAttributes.EditorExtension)
+					}
+				}
 				huhField = text
 				values[field.Key] = &value
+
 			case "select":
 				value := values[field.Key].(string)
 				select_ := huh.NewSelect[string]().
 					Title(field.Title).
 					Options(createOptions(field.Options)...).
 					Value(&value)
+				if field.SelectAttributes != nil {
+					select_ = select_.Inline(field.SelectAttributes.Inline)
+					if field.SelectAttributes.Height > 0 {
+						select_ = select_.Height(field.SelectAttributes.Height)
+					}
+					select_ = select_.Filtering(field.SelectAttributes.Filterable)
+				}
 				huhField = select_
 				values[field.Key] = &value
+
 			case "multiselect":
 				value := values[field.Key].([]string)
 				multiSelect := huh.NewMultiSelect[string]().
 					Title(field.Title).
 					Options(createOptions(field.Options)...).
 					Value(&value)
+				if field.MultiSelectAttributes != nil {
+					if field.MultiSelectAttributes.Limit > 0 {
+						multiSelect = multiSelect.Limit(field.MultiSelectAttributes.Limit)
+					}
+					if field.MultiSelectAttributes.Height > 0 {
+						multiSelect = multiSelect.Height(field.MultiSelectAttributes.Height)
+					}
+					multiSelect = multiSelect.Filterable(field.MultiSelectAttributes.Filterable)
+				}
 				huhField = multiSelect
 				values[field.Key] = &value
+
 			case "confirm":
 				value := values[field.Key].(bool)
 				confirm := huh.NewConfirm().
 					Title(field.Title).
 					Value(&value)
+				if field.ConfirmAttributes != nil {
+					if field.ConfirmAttributes.Affirmative != "" {
+						confirm = confirm.Affirmative(field.ConfirmAttributes.Affirmative)
+					}
+					if field.ConfirmAttributes.Negative != "" {
+						confirm = confirm.Negative(field.ConfirmAttributes.Negative)
+					}
+				}
 				huhField = confirm
 				values[field.Key] = &value
+
+			case "note":
+				note := huh.NewNote().
+					Title(field.Title).
+					Description(field.Description)
+				if field.NoteAttributes != nil {
+					if field.NoteAttributes.Height > 0 {
+						note = note.Height(field.NoteAttributes.Height)
+					}
+					if field.NoteAttributes.ShowNextButton {
+						note = note.Next(true)
+						if field.NoteAttributes.NextLabel != "" {
+							note = note.NextLabel(field.NoteAttributes.NextLabel)
+						}
+					}
+				}
+				huhField = note
+
+			case "filepicker":
+				value := values[field.Key].(string)
+				filePicker := huh.NewFilePicker().
+					Title(field.Title).
+					Value(&value)
+				if field.FilePickerAttributes != nil {
+					if field.FilePickerAttributes.CurrentDirectory != "" {
+						filePicker = filePicker.CurrentDirectory(field.FilePickerAttributes.CurrentDirectory)
+					}
+					filePicker = filePicker.
+						ShowHidden(field.FilePickerAttributes.ShowHidden).
+						ShowSize(field.FilePickerAttributes.ShowSize).
+						ShowPermissions(field.FilePickerAttributes.ShowPermissions).
+						FileAllowed(field.FilePickerAttributes.FileAllowed).
+						DirAllowed(field.FilePickerAttributes.DirAllowed)
+					if len(field.FilePickerAttributes.AllowedTypes) > 0 {
+						filePicker = filePicker.AllowedTypes(field.FilePickerAttributes.AllowedTypes)
+					}
+					if field.FilePickerAttributes.Height > 0 {
+						filePicker = filePicker.Height(field.FilePickerAttributes.Height)
+					}
+				}
+				huhField = filePicker
+				values[field.Key] = &value
+
 			default:
 				return nil, fmt.Errorf("unsupported field type: %s", field.Type)
 			}
@@ -215,6 +375,10 @@ func getDefaultValue(fieldType string) interface{} {
 		return []string{}
 	case "confirm":
 		return false
+	case "note":
+		return ""
+	case "filepicker":
+		return ""
 	default:
 		return nil
 	}
