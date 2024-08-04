@@ -1,6 +1,25 @@
-# YAML DSL for Form Creation
+---
+Title: Uhoh Form DSL
+Slug: uhoh-dsl
+Short: Describe the uhoh DSL for form creation
+Topics:
+- dsl
+- uhoh
+Commands:
+- help
+Flags:
+- dsl
+- topic
+- help
+IsTemplate: false
+IsTopLevel: true
+ShowPerDefault: true
+SectionType: GeneralTopic
+---
 
-This document describes a YAML-based Domain Specific Language (DSL) for creating interactive forms. The DSL allows you to define forms with various field types, validation rules, and styling options.
+# Uhoh YAML DSL for Form Creation
+
+This document describes the "uhoh" YAML-based Domain Specific Language (DSL) for creating interactive forms. The DSL allows you to define forms with various field types, validation rules, and styling options.
 
 ## Top-Level Structure
 
