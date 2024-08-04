@@ -8,10 +8,9 @@ import (
 )
 
 type Form struct {
-	Name       string   `yaml:"name,omitempty"`
-	Theme      string   `yaml:"theme,omitempty"`
-	Accessible bool     `yaml:"accessible,omitempty"`
-	Groups     []*Group `yaml:"groups"`
+	Name   string   `yaml:"name,omitempty"`
+	Theme  string   `yaml:"theme,omitempty"`
+	Groups []*Group `yaml:"groups"`
 }
 
 type Group struct {
@@ -333,11 +332,6 @@ func (f *Form) Run() (map[string]interface{}, error) {
 			return nil, err
 		}
 		huhForm = huhForm.WithTheme(theme)
-	}
-
-	// Set accessibility mode if specified
-	if f.Accessible {
-		huhForm = huhForm.WithAccessible(true)
 	}
 
 	// Run the form

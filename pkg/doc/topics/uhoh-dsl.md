@@ -32,7 +32,6 @@ The top-level structure of a form in the YAML DSL is as follows:
 ```yaml
 name: string  # Optional name for the form
 theme: string  # Optional theme (Charm, Dracula, Catppuccin, Base16, Default)
-accessible: boolean  # Optional accessibility mode
 groups:
   - name: string  # Optional group name
     fields:
@@ -44,7 +43,6 @@ groups:
 ```yaml
 name: Customer Feedback Form
 theme: Charm
-accessible: true
 groups:
   - name: Personal Information
     fields:
@@ -294,3 +292,21 @@ groups:
             next_label: Proceed to Upload
 ```
 
+## Command Format for CLI Execution
+
+The Uhoh DSL supports a command format that allows forms to be executed directly from the command line interface (CLI). This format includes additional top-level fields that provide metadata for the command.
+
+The command format structure is as follows:
+
+```yaml
+name: string       # Required: Unique identifier for the command, kebab case lower case. This name will be used for the command on the CLI.
+short: string      # Required: Short description of the command
+form:              # Required: Form definition (see Top-Level Structure)
+  # ... form definition ...
+```
+
+This command format allows you to execute forms from the CLI using the following syntax:
+
+```bash
+uhoh run-command ui.yaml [options]
+```

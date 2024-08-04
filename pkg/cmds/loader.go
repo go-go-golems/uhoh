@@ -42,9 +42,8 @@ type UhohCommandDescription struct {
 	Arguments []*parameters.ParameterDefinition `yaml:"arguments,omitempty"`
 	Layers    []layers.ParameterLayer           `yaml:"layers,omitempty"`
 	Form      struct {
-		Name       string `yaml:"name,omitempty"`
-		Theme      string `yaml:"theme,omitempty"`
-		Accessible bool   `yaml:"accessible,omitempty"`
+		Name  string `yaml:"name,omitempty"`
+		Theme string `yaml:"theme,omitempty"`
 
 		Groups []struct {
 			Name   string                   `yaml:"name,omitempty"`
@@ -72,10 +71,9 @@ func (u *UhohCommandLoader) loadUhohCommandFromReader(
 	}
 
 	form := &pkg.Form{
-		Name:       ucd.Form.Name,
-		Theme:      ucd.Form.Theme,
-		Accessible: ucd.Form.Accessible,
-		Groups:     make([]*pkg.Group, len(ucd.Form.Groups)),
+		Name:   ucd.Form.Name,
+		Theme:  ucd.Form.Theme,
+		Groups: make([]*pkg.Group, len(ucd.Form.Groups)),
 	}
 
 	// Process the fields and convert the raw attributes to the correct type
