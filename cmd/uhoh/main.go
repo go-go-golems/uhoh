@@ -153,7 +153,7 @@ func handleRunCommand() error {
 		return errors.Wrap(err, "could not get absolute path")
 	}
 
-	cmds_, err := loaders.LoadCommandsFromFS(fs_, filePath, os.Args[2], loader, []glazed_cmds.CommandDescriptionOption{}, []alias.Option{})
+	cmds_, err := loader.LoadCommands(fs_, filePath, []glazed_cmds.CommandDescriptionOption{}, []alias.Option{})
 	if err != nil {
 		return errors.Wrap(err, "could not load command")
 	}
@@ -172,8 +172,6 @@ func handleRunCommand() error {
 	if err != nil {
 		return errors.Wrap(err, "could not add doc to help system")
 	}
-
-	helpSystem.SetupCobraRootCommand(rootCmd)
 
 	rootCmd.AddCommand(cobraCommand)
 	restArgs := os.Args[3:]
