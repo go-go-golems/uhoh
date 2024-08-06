@@ -1,6 +1,8 @@
 package pkg
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -19,20 +21,20 @@ type Group struct {
 }
 
 type Field struct {
-	Type                  string                 `yaml:"type"`
-	Key                   string                 `yaml:"key,omitempty"`
-	Title                 string                 `yaml:"title,omitempty"`
-	Description           string                 `yaml:"description,omitempty"`
-	Value                 interface{}            `yaml:"value,omitempty"`
-	Options               []*Option              `yaml:"options,omitempty"`
-	Validation            []*Validation          `yaml:"validation,omitempty"`
-	InputAttributes       *InputAttributes       `yaml:"attributes,omitempty"`
-	TextAttributes        *TextAttributes        `yaml:"attributes,omitempty"`
-	SelectAttributes      *SelectAttributes      `yaml:"attributes,omitempty"`
-	MultiSelectAttributes *MultiSelectAttributes `yaml:"attributes,omitempty"`
-	ConfirmAttributes     *ConfirmAttributes     `yaml:"attributes,omitempty"`
-	NoteAttributes        *NoteAttributes        `yaml:"attributes,omitempty"`
-	FilePickerAttributes  *FilePickerAttributes  `yaml:"attributes,omitempty"`
+	Type                  string        `yaml:"type"`
+	Key                   string        `yaml:"key,omitempty"`
+	Title                 string        `yaml:"title,omitempty"`
+	Description           string        `yaml:"description,omitempty"`
+	Value                 interface{}   `yaml:"value,omitempty"`
+	Options               []*Option     `yaml:"options,omitempty"`
+	Validation            []*Validation `yaml:"validation,omitempty"`
+	InputAttributes       *InputAttributes
+	TextAttributes        *TextAttributes
+	SelectAttributes      *SelectAttributes
+	MultiSelectAttributes *MultiSelectAttributes
+	ConfirmAttributes     *ConfirmAttributes
+	NoteAttributes        *NoteAttributes
+	FilePickerAttributes  *FilePickerAttributes
 }
 
 type Option struct {
@@ -100,43 +102,12 @@ type FieldWithValidation interface {
 	Validate(func(string) error) huh.Field
 }
 
-func addValidation(field huh.Field, validations []*Validation) huh.Field {
-	switch f := field.(type) {
-	case *huh.Input:
-		return f.Validate(func(s string) error {
-			for _, v := range validations {
-				if s == v.Condition {
-					return fmt.Errorf(v.Error)
-				}
-			}
-			return nil
-		})
-	case *huh.Select[string]:
-		return f.Validate(func(s string) error {
-			for _, v := range validations {
-				if s == v.Condition {
-					return fmt.Errorf(v.Error)
-				}
-			}
-			return nil
-		})
-	case *huh.Confirm:
-		return f.Validate(func(b bool) error {
-			for _, v := range validations {
-				if fmt.Sprintf("%v", b) == v.Condition {
-					return fmt.Errorf(v.Error)
-				}
-			}
-			return nil
-		})
-	// Add more cases for other field types as needed
-	default:
-		return field
-	}
+func addValidation(field huh.Field, validations []*Validation) (huh.Field, error) {
+	return nil, errors.New("not implemented")
 }
 
 // Run executes the form and returns a map of the input values and an error if any
-func (f *Form) Run() (map[string]interface{}, error) {
+func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 	// Create a map to store the input values
 	values := make(map[string]interface{})
 
@@ -311,10 +282,18 @@ func (f *Form) Run() (map[string]interface{}, error) {
 
 			// Add validation if specified
 			if len(field.Validation) > 0 {
-				huhField = addValidation(huhField, field.Validation)
+				var err error
+				huhField, err = addValidation(huhField, field.Validation)
+				if err != nil {
+					return nil, fmt.Errorf("validation error for field %s: %w", field.Key, err)
+				}
 			}
 
 			huhFields = append(huhFields, huhField)
+		}
+
+		if len(huhFields) == 0 {
+			return nil, fmt.Errorf("no fields found in group %s", group.Name)
 		}
 
 		// Create the huh Group
@@ -335,7 +314,7 @@ func (f *Form) Run() (map[string]interface{}, error) {
 	}
 
 	// Run the form
-	err := huhForm.Run()
+	err := huhForm.RunWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
