@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"fmt"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"io"
@@ -52,8 +53,8 @@ type UhohCommandDescription struct {
 	} `yaml:"form"`
 }
 
-// Modify the loadUhohCommandFromReader function
-func (u *UhohCommandLoader) loadUhohCommandFromReader(
+// Modify the LoadUhohCommandFromReader function
+func (u *UhohCommandLoader) LoadUhohCommandFromReader(
 	s io.Reader,
 	options []cmds.CommandDescriptionOption,
 	_ []alias.Option,
@@ -76,11 +77,18 @@ func (u *UhohCommandLoader) loadUhohCommandFromReader(
 		Groups: make([]*pkg.Group, len(ucd.Form.Groups)),
 	}
 
+	if len(ucd.Form.Groups) == 0 {
+		return nil, fmt.Errorf("no groups found in form %s", ucd.Form.Name)
+	}
+
 	// Process the fields and convert the raw attributes to the correct type
 	for i, group := range ucd.Form.Groups {
 		form.Groups[i] = &pkg.Group{
 			Name:   group.Name,
 			Fields: make([]*pkg.Field, len(group.Fields)),
+		}
+		if len(group.Fields) == 0 {
+			return nil, fmt.Errorf("no fields found in group %s", group.Name)
 		}
 		for j, field := range group.Fields {
 			processedField, err := processField(field)
@@ -190,7 +198,7 @@ func (u *UhohCommandLoader) LoadCommands(
 	}(r)
 	return loaders.LoadCommandOrAliasFromReader(
 		r,
-		u.loadUhohCommandFromReader,
+		u.LoadUhohCommandFromReader,
 		options,
 		aliasOptions)
 }

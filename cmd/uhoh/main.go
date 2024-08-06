@@ -1,10 +1,18 @@
 package main
 
 import (
+	"bufio"
+	"context"
+	_ "embed"
 	"fmt"
+	"io"
+	"math/rand"
 	"os"
 	"os/signal"
+	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/go-go-golems/uhoh/pkg"
 	"github.com/go-go-golems/uhoh/pkg/cmds"
@@ -102,7 +110,7 @@ groups:
 		log.Fatal().Err(err).Msg("Error parsing YAML")
 	}
 
-	values, err := form.Run()
+	values, err := form.Run(context.Background())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error running form")
 	}
@@ -123,6 +131,167 @@ var runCommandCmd = &cobra.Command{
 	},
 }
 
+var streamCmd = &cobra.Command{
+	Use:   "stream",
+	Short: "Stream commands from stdin",
+	Run:   runStream,
+}
+
+func init() {
+	streamCmd.Flags().String("error-behavior", "exit", "Error behavior: ignore, debug, or exit")
+}
+
+func runStream(cmd *cobra.Command, args []string) {
+	errorBehavior, _ := cmd.Flags().GetString("error-behavior")
+	runStreamWithReader(os.Stdin, errorBehavior)
+}
+
+func runStreamWithReader(reader io.Reader, errorBehavior string) {
+	scanner := bufio.NewScanner(reader)
+	var currentCtx context.Context
+	var cancel context.CancelFunc
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var accumulatedInput string
+
+	for scanner.Scan() {
+		input := scanner.Text()
+		accumulatedInput += input + "\n"
+
+		mu.Lock()
+		if cancel != nil {
+			time.Sleep(time.Millisecond * 100)
+			cancel()
+			wg.Wait()
+		}
+
+		currentCtx, cancel = context.WithCancel(context.Background())
+		wg.Add(1)
+		mu.Unlock()
+
+		go func(ctx context.Context, command string) {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					handleError(fmt.Errorf("%v", r), command, errorBehavior)
+				}
+			}()
+			runStreamCommand(ctx, command, errorBehavior)
+		}(currentCtx, accumulatedInput)
+	}
+
+	if cancel != nil {
+		cancel()
+		wg.Wait()
+	}
+
+	if err := scanner.Err(); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "Error reading input:", err)
+	}
+}
+
+func runStreamCommand(ctx context.Context, command string, errorBehavior string) {
+	// Create a UhohCommandLoader
+	loader := &cmds.UhohCommandLoader{}
+
+	// Use the loader to parse the command
+	commands, err := loader.LoadUhohCommandFromReader(
+		strings.NewReader(command),
+		[]glazed_cmds.CommandDescriptionOption{},
+		[]alias.Option{},
+	)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error parsing command: %v\n", err)
+		return
+	}
+
+	if len(commands) != 1 {
+		handleError(fmt.Errorf("expected exactly one command, got %d", len(commands)), command, errorBehavior)
+		return
+	}
+
+	// Extract the form from the UhohCommand
+	uhohCmd, ok := commands[0].(*cmds.UhohCommand)
+	if !ok {
+		handleError(fmt.Errorf("unexpected command type"), command, errorBehavior)
+		return
+	}
+
+	form := uhohCmd.Form
+
+	// Run the form
+	values, err := form.Run(ctx)
+	if err != nil {
+		if err == context.Canceled || ctx.Err() == context.Canceled {
+			fmt.Println("Command cancelled")
+		} else {
+			handleError(err, command, errorBehavior)
+		}
+		return
+	}
+
+	if len(values) > 0 {
+		fmt.Println("Form Results:")
+		for key, value := range values {
+			fmt.Printf("%s: %v\n", key, value)
+		}
+	}
+}
+
+func handleError(err error, command string, errorBehavior string) {
+	switch errorBehavior {
+	case "ignore":
+		// Do nothing
+	case "debug":
+		_, _ = fmt.Fprintf(os.Stderr, "Error occurred while processing command:\n%s\nError: %v\n", command, err)
+	case "exit":
+		_, _ = fmt.Fprintf(os.Stderr, "Error occurred while processing command:\n%s\nError: %v\n", command, err)
+		os.Exit(1)
+	default:
+		// Default behavior: print error and continue
+		_, _ = fmt.Fprintf(os.Stderr, "Error occurred while processing command:\n%s\nError: %v\n", command, err)
+	}
+}
+
+var testStreamCmd = &cobra.Command{
+	Use:   "test-stream",
+	Short: "Test stream command with simulated slow input",
+	Run:   runTestStream,
+}
+
+func init() {
+	testStreamCmd.Flags().String("error-behavior", "exit", "Error behavior: ignore, debug, or exit")
+}
+
+//go:embed examples/05-snake-care-info.yaml
+var snakeCareInfo string
+
+func runTestStream(cmd *cobra.Command, args []string) {
+	errorBehavior, _ := cmd.Flags().GetString("error-behavior")
+	r, w := io.Pipe()
+	defer func(r *io.PipeReader) {
+		_ = r.Close()
+	}(r)
+
+	go func() {
+		defer func(w *io.PipeWriter) {
+			_ = w.Close()
+		}(w)
+		lines := strings.Split(snakeCareInfo, "\n")
+
+		for _, line := range lines {
+			time.Sleep(time.Duration(50+rand.Intn(50)) * time.Millisecond)
+			_, err := w.Write([]byte(line + "\n"))
+			if err != nil {
+				log.Error().Err(err).Msg("Error writing to pipe")
+				return
+			}
+		}
+	}()
+
+	runStreamWithReader(r, errorBehavior)
+}
+
 func main() {
 	helpSystem := help.NewHelpSystem()
 	err := doc.AddDocToHelpSystem(helpSystem)
@@ -132,6 +301,8 @@ func main() {
 
 	rootCmd.AddCommand(runCommandCmd)
 	rootCmd.AddCommand(ExampleCommand())
+	rootCmd.AddCommand(streamCmd)
+	rootCmd.AddCommand(testStreamCmd) // Add the new test-stream command
 
 	rootCmd.PersistentFlags().Bool("mem-profile", false, "Enable memory profiling")
 

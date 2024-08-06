@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -19,20 +20,20 @@ type Group struct {
 }
 
 type Field struct {
-	Type                  string                 `yaml:"type"`
-	Key                   string                 `yaml:"key,omitempty"`
-	Title                 string                 `yaml:"title,omitempty"`
-	Description           string                 `yaml:"description,omitempty"`
-	Value                 interface{}            `yaml:"value,omitempty"`
-	Options               []*Option              `yaml:"options,omitempty"`
-	Validation            []*Validation          `yaml:"validation,omitempty"`
-	InputAttributes       *InputAttributes       `yaml:"attributes,omitempty"`
-	TextAttributes        *TextAttributes        `yaml:"attributes,omitempty"`
-	SelectAttributes      *SelectAttributes      `yaml:"attributes,omitempty"`
-	MultiSelectAttributes *MultiSelectAttributes `yaml:"attributes,omitempty"`
-	ConfirmAttributes     *ConfirmAttributes     `yaml:"attributes,omitempty"`
-	NoteAttributes        *NoteAttributes        `yaml:"attributes,omitempty"`
-	FilePickerAttributes  *FilePickerAttributes  `yaml:"attributes,omitempty"`
+	Type                  string        `yaml:"type"`
+	Key                   string        `yaml:"key,omitempty"`
+	Title                 string        `yaml:"title,omitempty"`
+	Description           string        `yaml:"description,omitempty"`
+	Value                 interface{}   `yaml:"value,omitempty"`
+	Options               []*Option     `yaml:"options,omitempty"`
+	Validation            []*Validation `yaml:"validation,omitempty"`
+	InputAttributes       *InputAttributes
+	TextAttributes        *TextAttributes
+	SelectAttributes      *SelectAttributes
+	MultiSelectAttributes *MultiSelectAttributes
+	ConfirmAttributes     *ConfirmAttributes
+	NoteAttributes        *NoteAttributes
+	FilePickerAttributes  *FilePickerAttributes
 }
 
 type Option struct {
@@ -136,7 +137,7 @@ func addValidation(field huh.Field, validations []*Validation) huh.Field {
 }
 
 // Run executes the form and returns a map of the input values and an error if any
-func (f *Form) Run() (map[string]interface{}, error) {
+func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 	// Create a map to store the input values
 	values := make(map[string]interface{})
 
@@ -317,6 +318,10 @@ func (f *Form) Run() (map[string]interface{}, error) {
 			huhFields = append(huhFields, huhField)
 		}
 
+		if len(huhFields) == 0 {
+			return nil, fmt.Errorf("no fields found in group %s", group.Name)
+		}
+
 		// Create the huh Group
 		huhGroup := huh.NewGroup(huhFields...)
 		huhGroups = append(huhGroups, huhGroup)
@@ -335,7 +340,7 @@ func (f *Form) Run() (map[string]interface{}, error) {
 	}
 
 	// Run the form
-	err := huhForm.Run()
+	err := huhForm.RunWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
