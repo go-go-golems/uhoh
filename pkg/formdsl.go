@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -101,39 +102,8 @@ type FieldWithValidation interface {
 	Validate(func(string) error) huh.Field
 }
 
-func addValidation(field huh.Field, validations []*Validation) huh.Field {
-	switch f := field.(type) {
-	case *huh.Input:
-		return f.Validate(func(s string) error {
-			for _, v := range validations {
-				if s == v.Condition {
-					return fmt.Errorf(v.Error)
-				}
-			}
-			return nil
-		})
-	case *huh.Select[string]:
-		return f.Validate(func(s string) error {
-			for _, v := range validations {
-				if s == v.Condition {
-					return fmt.Errorf(v.Error)
-				}
-			}
-			return nil
-		})
-	case *huh.Confirm:
-		return f.Validate(func(b bool) error {
-			for _, v := range validations {
-				if fmt.Sprintf("%v", b) == v.Condition {
-					return fmt.Errorf(v.Error)
-				}
-			}
-			return nil
-		})
-	// Add more cases for other field types as needed
-	default:
-		return field
-	}
+func addValidation(field huh.Field, validations []*Validation) (huh.Field, error) {
+	return nil, errors.New("not implemented")
 }
 
 // Run executes the form and returns a map of the input values and an error if any
@@ -312,7 +282,11 @@ func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 
 			// Add validation if specified
 			if len(field.Validation) > 0 {
-				huhField = addValidation(huhField, field.Validation)
+				var err error
+				huhField, err = addValidation(huhField, field.Validation)
+				if err != nil {
+					return nil, fmt.Errorf("validation error for field %s: %w", field.Key, err)
+				}
 			}
 
 			huhFields = append(huhFields, huhField)
