@@ -1,11 +1,13 @@
 package cmds
 
 import (
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"fmt"
 	"io"
 	"io/fs"
 	"strings"
+
+	"github.com/go-go-golems/glazed/pkg/cmds/layers"
+	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/alias"
@@ -41,6 +43,7 @@ type UhohCommandDescription struct {
 	Flags     []*parameters.ParameterDefinition `yaml:"flags,omitempty"`
 	Arguments []*parameters.ParameterDefinition `yaml:"arguments,omitempty"`
 	Layers    []layers.ParameterLayer           `yaml:"layers,omitempty"`
+	Type      string                            `yaml:"type,omitempty"`
 	Form      struct {
 		Name  string `yaml:"name,omitempty"`
 		Theme string `yaml:"theme,omitempty"`
@@ -52,8 +55,8 @@ type UhohCommandDescription struct {
 	} `yaml:"form"`
 }
 
-// Modify the loadUhohCommandFromReader function
-func (u *UhohCommandLoader) loadUhohCommandFromReader(
+// Modify the LoadUhohCommandFromReader function
+func (u *UhohCommandLoader) LoadUhohCommandFromReader(
 	s io.Reader,
 	options []cmds.CommandDescriptionOption,
 	_ []alias.Option,
@@ -70,10 +73,20 @@ func (u *UhohCommandLoader) loadUhohCommandFromReader(
 		return nil, err
 	}
 
+	if ucd.Type == "" {
+		ucd.Type = "uhoh"
+	} else if ucd.Type != "uhoh" {
+		return nil, fmt.Errorf("invalid type: %s", ucd.Type)
+	}
+
 	form := &pkg.Form{
 		Name:   ucd.Form.Name,
 		Theme:  ucd.Form.Theme,
 		Groups: make([]*pkg.Group, len(ucd.Form.Groups)),
+	}
+
+	if len(ucd.Form.Groups) == 0 {
+		return nil, fmt.Errorf("no groups found in form %s", ucd.Form.Name)
 	}
 
 	// Process the fields and convert the raw attributes to the correct type
@@ -81,6 +94,9 @@ func (u *UhohCommandLoader) loadUhohCommandFromReader(
 		form.Groups[i] = &pkg.Group{
 			Name:   group.Name,
 			Fields: make([]*pkg.Field, len(group.Fields)),
+		}
+		if len(group.Fields) == 0 {
+			return nil, fmt.Errorf("no fields found in group %s", group.Name)
 		}
 		for j, field := range group.Fields {
 			processedField, err := processField(field)
@@ -190,7 +206,7 @@ func (u *UhohCommandLoader) LoadCommands(
 	}(r)
 	return loaders.LoadCommandOrAliasFromReader(
 		r,
-		u.loadUhohCommandFromReader,
+		u.LoadUhohCommandFromReader,
 		options,
 		aliasOptions)
 }

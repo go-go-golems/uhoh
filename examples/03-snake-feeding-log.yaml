@@ -30,9 +30,6 @@ form:
         - type: input
           key: quantity
           title: Quantity
-          validation:
-            - condition: "parseInt(value) <= 0"
-              error: Please enter a positive number
           attributes:
             placeholder: "e.g., 2"
             char_limit: 3

@@ -29,7 +29,7 @@ func NewUhohCommand(
 }
 
 func (u *UhohCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
-	results, err := u.Form.Run()
+	results, err := u.Form.Run(ctx)
 	if err != nil {
 		return err
 	}
