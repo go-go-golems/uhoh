@@ -96,9 +96,6 @@ groups:
       - type: input
         key: name
         title: What's your name?
-        validation:
-          - condition: Frank@
-            error: Sorry, we don't serve customers named Frank.
       - type: confirm
         key: discount
         title: Would you like 15% off?ggj
@@ -295,6 +292,12 @@ func runTestStream(cmd *cobra.Command, args []string) {
 func main() {
 	helpSystem := help.NewHelpSystem()
 	err := doc.AddDocToHelpSystem(helpSystem)
+	cobra.CheckErr(err)
+
+	err = clay.InitViper("uhoh", rootCmd)
+	cobra.CheckErr(err)
+
+	err = clay.InitLogger()
 	cobra.CheckErr(err)
 
 	helpSystem.SetupCobraRootCommand(rootCmd)

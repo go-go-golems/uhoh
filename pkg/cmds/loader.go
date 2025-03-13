@@ -2,11 +2,12 @@ package cmds
 
 import (
 	"fmt"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"io"
 	"io/fs"
 	"strings"
+
+	"github.com/go-go-golems/glazed/pkg/cmds/layers"
+	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/alias"
@@ -42,6 +43,7 @@ type UhohCommandDescription struct {
 	Flags     []*parameters.ParameterDefinition `yaml:"flags,omitempty"`
 	Arguments []*parameters.ParameterDefinition `yaml:"arguments,omitempty"`
 	Layers    []layers.ParameterLayer           `yaml:"layers,omitempty"`
+	Type      string                            `yaml:"type,omitempty"`
 	Form      struct {
 		Name  string `yaml:"name,omitempty"`
 		Theme string `yaml:"theme,omitempty"`
@@ -69,6 +71,12 @@ func (u *UhohCommandLoader) LoadUhohCommandFromReader(
 	err = yaml.Unmarshal(yamlContent, &ucd)
 	if err != nil {
 		return nil, err
+	}
+
+	if ucd.Type == "" {
+		ucd.Type = "uhoh"
+	} else if ucd.Type != "uhoh" {
+		return nil, fmt.Errorf("invalid type: %s", ucd.Type)
 	}
 
 	form := &pkg.Form{
