@@ -41,9 +41,6 @@ var rootCmd = &cobra.Command{
 	Short:   "uhoh is a tool to help you run forms",
 	Version: version,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		err := clay.InitLogger()
-		cobra.CheckErr(err)
-
 		memProfile, _ := cmd.Flags().GetBool("mem-profile")
 		if memProfile {
 			log.Info().Msg("Starting memory profiler")
@@ -295,9 +292,6 @@ func main() {
 	cobra.CheckErr(err)
 
 	err = clay.InitViper("uhoh", rootCmd)
-	cobra.CheckErr(err)
-
-	err = clay.InitLogger()
 	cobra.CheckErr(err)
 
 	helpSystem.SetupCobraRootCommand(rootCmd)
