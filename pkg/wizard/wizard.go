@@ -23,6 +23,11 @@ type ExprFunc func(arguments ...interface{}) (interface{}, error)
 // - error: An error if the callback fails.
 type WizardCallbackFunc func(ctx context.Context, state map[string]interface{}) (result interface{}, nextStepID *string, err error)
 
+// ActionCallbackFunc defines the signature for callbacks specifically designed for action steps.
+// It receives the context, the current wizard state, and a map of arguments from the action step.
+// It returns a result that can be stored in the action's output key.
+type ActionCallbackFunc func(ctx context.Context, state map[string]interface{}, args map[string]interface{}) (interface{}, error)
+
 // Wizard defines the top-level structure for a multi-step wizard.
 type Wizard struct {
 	Name        string                 `yaml:"name"`
@@ -32,9 +37,10 @@ type Wizard struct {
 	GlobalState map[string]interface{} `yaml:"global_state,omitempty"`
 
 	// Non-YAML fields
-	exprFunctions map[string]ExprFunc // Renamed from customFunctions
-	callbacks     map[string]WizardCallbackFunc
-	initialState  map[string]interface{} // Added for external initial state
+	exprFunctions   map[string]ExprFunc // Renamed from customFunctions
+	callbacks       map[string]WizardCallbackFunc
+	actionCallbacks map[string]ActionCallbackFunc // New field for action-specific callbacks
+	initialState    map[string]interface{}        // Added for external initial state
 }
 
 // WizardOption is used to configure a Wizard during creation.
@@ -90,6 +96,31 @@ func WithInitialState(state map[string]interface{}) WizardOption {
 		w.initialState = state
 	}
 }
+
+// WithActionCallback registers a callback function specifically for action steps.
+func WithActionCallback(name string, fn ActionCallbackFunc) WizardOption {
+	return func(w *Wizard) {
+		if w.actionCallbacks == nil {
+			w.actionCallbacks = make(map[string]ActionCallbackFunc)
+		}
+		w.actionCallbacks[name] = fn
+	}
+}
+
+// WithActionCallbacks registers multiple action callback functions.
+func WithActionCallbacks(callbacks map[string]ActionCallbackFunc) WizardOption {
+	return func(w *Wizard) {
+		if w.actionCallbacks == nil {
+			w.actionCallbacks = make(map[string]ActionCallbackFunc)
+		}
+		for name, fn := range callbacks {
+			w.actionCallbacks[name] = fn
+		}
+	}
+}
+
+// Make sure Wizard implements ActionCallbackRegistry
+var _ steps.ActionCallbackRegistry = &Wizard{}
 
 // evaluateExprCondition evaluates a condition string against the wizard state,
 // including any registered custom functions.
@@ -170,6 +201,14 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 	}
 	logger.Debug().Interface("finalInitialState", wizardState).Msg("Initial State Finalized")
 	// --- End State Management ---
+
+	// Set up ActionStep registries
+	for i := range w.Steps {
+		if actionStep, ok := w.Steps[i].(*steps.ActionStep); ok {
+			actionStep.SetCallbackRegistry(w)
+			logger.Debug().Str("stepId", actionStep.ID()).Msg("Registered action callbacks for step")
+		}
+	}
 
 	// Basic execution loop - iterates through steps sequentially
 	currentStepIndex := 0
@@ -401,4 +440,20 @@ func LoadWizard(filePath string, opts ...WizardOption) (*Wizard, error) {
 
 	log.Debug().Str("filePath", filePath).Str("wizardName", wizard.Name).Int("stepCount", len(wizard.Steps)).Msg("Wizard loaded successfully")
 	return &wizard, nil
+}
+
+// ExecuteActionCallback looks up and executes an action callback by name.
+// It returns the result of the callback execution or an error if the callback
+// is not found or fails.
+func (w *Wizard) ExecuteActionCallback(ctx context.Context, callbackName string, state map[string]interface{}, args map[string]interface{}) (interface{}, error) {
+	if w.actionCallbacks == nil {
+		return nil, errors.Errorf("no action callbacks registered")
+	}
+
+	callback, found := w.actionCallbacks[callbackName]
+	if !found {
+		return nil, errors.Errorf("action callback '%s' not registered", callbackName)
+	}
+
+	return callback(ctx, state, args)
 }

@@ -1,0 +1,33 @@
+name: Info Step Example
+description: This wizard demonstrates the basic usage of an info step
+theme: Catppuccin
+steps:
+  - id: welcome
+    type: info
+    title: Welcome to the Info Step Demo
+    description: This step shows how to display rich text information to users
+    content: |
+      # Using Info Steps
+
+      Info steps are used to display information to users, such as:
+
+      * Welcome messages and introductions
+      * Instructions and help text
+      * Summary information
+      * Completion messages
+
+      They support **markdown** formatting for rich text display.
+
+      The content field contains the main body of text to display,
+      while the description field can provide a shorter summary.
+
+  - id: info_example_2
+    type: info
+    title: Another Example
+    content: |
+      This is another info step without a description.
+
+      Info steps don't modify the wizard state, they just
+      display information to the user.
+
+      Press Next to continue.

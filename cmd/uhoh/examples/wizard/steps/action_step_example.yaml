@@ -1,0 +1,81 @@
+name: Action Step Example
+description: This wizard demonstrates the usage of action steps to perform backend operations
+theme: Base16
+steps:
+  - id: introduction
+    type: info
+    title: Action Step Demo
+    content: |
+      This wizard demonstrates how action steps work.
+
+      Action steps perform background operations without requiring
+      direct user input. They're useful for:
+
+      * API calls
+      * Database operations
+      * File system operations
+      * Calculations and data processing
+
+      When using action steps in real applications, you'll need to register
+      callback functions that the action steps can call.
+
+      Click Next to see an action step in operation.
+
+  - id: collect_info
+    type: form
+    title: Enter Information
+    form:
+      groups:
+        - name: User Information
+          fields:
+            - type: input
+              key: username
+              title: Username
+              placeholder: Enter your username
+              validation:
+                - condition: "len(value) < 3"
+                  error: Username must be at least 3 characters
+            - type: input
+              key: email
+              title: Email Address
+              placeholder: Enter your email
+              validation:
+                - condition: "strings.Contains(value, '@') == false"
+                  error: Please enter a valid email address
+
+  - id: process_info
+    type: action
+    title: Processing Information
+    description: Please wait while your information is processed
+    action_type: function
+    function_name: processUserInfo
+    arguments:
+      validate: true
+      save: true
+    output_key: user_id
+
+  - id: generate_report
+    type: action
+    title: Generating Report
+    description: Creating a summary report of your account
+    action_type: function
+    function_name: generateUserReport
+    arguments:
+      format: pdf
+      include_stats: true
+    output_key: report_url
+
+  - id: completion
+    type: info
+    title: Process Complete
+    content: |
+      Your information has been processed successfully!
+
+      In a real application, the action steps would have:
+
+      1. Validated and saved your user information
+      2. Generated a customized report
+
+      This example demonstrates how action steps can perform
+      operations in the background and store their results in
+      the wizard state for use by subsequent steps.
