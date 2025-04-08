@@ -68,7 +68,7 @@ The core task is to implement the logic described in the DSL specification withi
     - Create helper functions to evaluate `@Expr` conditions (`skip_condition`, `visible_condition`, etc.) against the current wizard state map.
     - Use this evaluation within the step execution loop for conditional logic.
 
-5.  **[ ] Implement Navigation Logic:**
+5.  **[x] Implement Navigation Logic:**
 
     - Handle `skip_condition` evaluation before executing a step.
     - Determine the _next_ step based on (in order of precedence): `navigation` callback result, `next_step_map` (for `decision` steps), explicit `next_step` field, or default linear progression.

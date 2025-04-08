@@ -23,16 +23,25 @@ type Step interface {
 	SkipCondition() string
 	Execute(ctx context.Context, state map[string]interface{}) (map[string]interface{}, error)
 	GetBaseStep() *BaseStep
+	// Callback methods return the name of the registered callback (if any)
+	BeforeCallback() string
+	AfterCallback() string
+	ValidationCallback() string
+	NavigationCallback() string
 }
 
 // BaseStep contains common fields for all step types.
 type BaseStep struct {
-	StepID            string `yaml:"id"`
-	StepType          string `yaml:"type"`
-	StepTitle         string `yaml:"title,omitempty"`
-	StepDescription   string `yaml:"description,omitempty"`
-	StepSkipCondition string `yaml:"skip_condition,omitempty"`
-	NextStep          string `yaml:"next_step,omitempty"`
+	StepID                 string `yaml:"id"`
+	StepType               string `yaml:"type"`
+	StepTitle              string `yaml:"title,omitempty"`
+	StepDescription        string `yaml:"description,omitempty"`
+	StepSkipCondition      string `yaml:"skip_condition,omitempty"`
+	NextStep               string `yaml:"next_step,omitempty"`
+	StepBeforeCallback     string `yaml:"before,omitempty"`
+	StepAfterCallback      string `yaml:"after,omitempty"`
+	StepValidationCallback string `yaml:"validation,omitempty"`
+	StepNavigationCallback string `yaml:"navigation,omitempty"`
 }
 
 func (bs *BaseStep) ID() string {
@@ -53,6 +62,23 @@ func (bs *BaseStep) Description() string {
 
 func (bs *BaseStep) SkipCondition() string {
 	return bs.StepSkipCondition
+}
+
+// Callback implementations for BaseStep
+func (bs *BaseStep) BeforeCallback() string {
+	return bs.StepBeforeCallback
+}
+
+func (bs *BaseStep) AfterCallback() string {
+	return bs.StepAfterCallback
+}
+
+func (bs *BaseStep) ValidationCallback() string {
+	return bs.StepValidationCallback
+}
+
+func (bs *BaseStep) NavigationCallback() string {
+	return bs.StepNavigationCallback
 }
 
 // Placeholder Execute for BaseStep - concrete types should override this.

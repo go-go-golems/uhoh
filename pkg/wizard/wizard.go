@@ -13,9 +13,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// WizardFunc defines the signature for custom functions usable in Expr conditions.
+// ExprFunc defines the signature for custom functions usable in Expr conditions.
 // It takes the current wizard state as input.
-type WizardFunc func(arguments ...interface{}) (interface{}, error)
+type ExprFunc func(arguments ...interface{}) (interface{}, error)
+
+// WizardCallbackFunc defines the signature for callbacks executed during the wizard lifecycle.
+// It receives the context and the current wizard state.
+// It can return:
+// - result: Arbitrary data, often used by 'action' steps or stored by 'validation'.
+// - nextStepID: A pointer to a string indicating the ID of the next step to jump to (used by 'navigation' callbacks). nil means default flow.
+// - error: An error if the callback fails.
+type WizardCallbackFunc func(ctx context.Context, state map[string]interface{}) (result interface{}, nextStepID *string, err error)
 
 // Wizard defines the top-level structure for a multi-step wizard.
 type Wizard struct {
@@ -26,27 +34,54 @@ type Wizard struct {
 	GlobalState map[string]interface{} `yaml:"global_state,omitempty"`
 
 	// Non-YAML fields
-	customFunctions map[string]WizardFunc
-	initialState    map[string]interface{} // Added for external initial state
+	exprFunctions map[string]ExprFunc // Renamed from customFunctions
+	callbacks     map[string]WizardCallbackFunc
+	initialState  map[string]interface{} // Added for external initial state
 }
 
 // WizardOption is used to configure a Wizard during creation.
 type WizardOption func(*Wizard)
 
-// WithCustomFunction registers a custom function for use in expressions.
-func WithCustomFunction(name string, fn WizardFunc) WizardOption {
+// WithExprFunction registers a custom function for use in expressions.
+func WithExprFunction(name string, fn ExprFunc) WizardOption {
 	return func(w *Wizard) {
-		if w.customFunctions == nil {
-			w.customFunctions = make(map[string]WizardFunc)
+		if w.exprFunctions == nil {
+			w.exprFunctions = make(map[string]ExprFunc)
 		}
-		w.customFunctions[name] = fn
+		w.exprFunctions[name] = fn
 	}
 }
 
-func WithCustomFunctions(functions map[string]WizardFunc) WizardOption {
+// WithExprFunctions registers multiple custom functions for use in expressions.
+func WithExprFunctions(functions map[string]ExprFunc) WizardOption {
 	return func(w *Wizard) {
+		if w.exprFunctions == nil {
+			w.exprFunctions = make(map[string]ExprFunc)
+		}
 		for name, fn := range functions {
-			w.customFunctions[name] = fn
+			w.exprFunctions[name] = fn
+		}
+	}
+}
+
+// WithCallback registers a callback function for use at different lifecycle points.
+func WithCallback(name string, fn WizardCallbackFunc) WizardOption {
+	return func(w *Wizard) {
+		if w.callbacks == nil {
+			w.callbacks = make(map[string]WizardCallbackFunc)
+		}
+		w.callbacks[name] = fn
+	}
+}
+
+// WithCallbacks registers multiple callback functions.
+func WithCallbacks(callbacks map[string]WizardCallbackFunc) WizardOption {
+	return func(w *Wizard) {
+		if w.callbacks == nil {
+			w.callbacks = make(map[string]WizardCallbackFunc)
+		}
+		for name, fn := range callbacks {
+			w.callbacks[name] = fn
 		}
 	}
 }
@@ -72,7 +107,7 @@ func (w *Wizard) evaluateExprCondition(condition string, state map[string]interf
 	}
 
 	// Add custom functions
-	for name, fn := range w.customFunctions {
+	for name, fn := range w.exprFunctions {
 		opts = append(opts, expr.Function(name, fn))
 	}
 
@@ -146,6 +181,8 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 	currentStepIndex := 0
 	for currentStepIndex < len(w.Steps) {
 		step := w.Steps[currentStepIndex]
+		nextStepIDOverride := new(string) // Used to capture navigation overrides from callbacks
+		*nextStepIDOverride = ""          // Initialize empty, means no override
 
 		// --- Skip Condition Check --- START ---
 		skipCond := step.SkipCondition()
@@ -166,7 +203,21 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 		}
 		// --- Skip Condition Check --- END ---
 
-		// TODO(manuel, 2024-08-05) Implement 'before' callback execution
+		// --- Before Callback --- START ---
+		if beforeCallbackName := step.BeforeCallback(); beforeCallbackName != "" {
+			callback, found := w.callbacks[beforeCallbackName]
+			if !found {
+				fmt.Printf("Warning: 'before' callback '%s' for step '%s' not registered. Skipping.\n", beforeCallbackName, step.ID())
+			} else {
+				fmt.Printf("Executing 'before' callback '%s' for step '%s'\n", beforeCallbackName, step.ID())
+				_, _, err := callback(ctx, wizardState) // Result and nextStepID ignored for 'before'
+				if err != nil {
+					return wizardState, errors.Wrapf(err, "'before' callback '%s' for step '%s' failed", beforeCallbackName, step.ID())
+				}
+				// Optionally update state based on callback result? TBD
+			}
+		}
+		// --- Before Callback --- END ---
 
 		fmt.Printf("\nExecuting Step %d/%d: ID = %s, Type = %s\n",
 			currentStepIndex+1, len(w.Steps), step.ID(), step.Type())
@@ -195,8 +246,24 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 			}
 		}
 
-		// TODO(manuel, 2024-08-05) Implement 'after' callback execution
-		// TODO(manuel, 2024-08-05) Implement 'validation' callback/logic
+		// --- After Callback --- START ---
+		if afterCallbackName := step.AfterCallback(); afterCallbackName != "" {
+			callback, found := w.callbacks[afterCallbackName]
+			if !found {
+				fmt.Printf("Warning: 'after' callback '%s' for step '%s' not registered. Skipping.\n", afterCallbackName, step.ID())
+			} else {
+				fmt.Printf("Executing 'after' callback '%s' for step '%s'\n", afterCallbackName, step.ID())
+				// Pass stepResult separately? Or merge first? Let's pass current state for now.
+				// Callback might modify state directly or return results to be merged.
+				// Result and nextStepID ignored for 'after'.
+				_, _, err := callback(ctx, wizardState)
+				if err != nil {
+					return wizardState, errors.Wrapf(err, "'after' callback '%s' for step '%s' failed", afterCallbackName, step.ID())
+				}
+				// TODO(manuel, 2024-08-06) Decide how 'after' callback results affect state.
+			}
+		}
+		// --- After Callback --- END ---
 
 		// --- State Management: Merge step results into state ---
 		if stepResult != nil {
@@ -216,12 +283,76 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 		}
 		// --- End State Management ---
 
-		// Determine the next step
-		// TODO(manuel, 2024-08-05) Implement navigation logic (callbacks, next_step_map, next_step)
-		// Basic linear progression for now:
-		nextStepIndex := currentStepIndex + 1
+		// --- Validation Callback --- START ---
+		if validationCallbackName := step.ValidationCallback(); validationCallbackName != "" {
+			callback, found := w.callbacks[validationCallbackName]
+			if !found {
+				fmt.Printf("Warning: 'validation' callback '%s' for step '%s' not registered. Skipping.\n", validationCallbackName, step.ID())
+			} else {
+				fmt.Printf("Executing 'validation' callback '%s' for step '%s'\n", validationCallbackName, step.ID())
+				// Validation callbacks check the state *after* merge.
+				// Result and nextStepID ignored for 'validation'. Error signifies failure.
+				_, _, err := callback(ctx, wizardState)
+				if err != nil {
+					// Validation failure should likely halt the process or trigger remediation (TBD)
+					return wizardState, errors.Wrapf(err, "'validation' callback '%s' for step '%s' failed", validationCallbackName, step.ID())
+				}
+				fmt.Printf("Validation callback '%s' completed successfully.\n", validationCallbackName)
+			}
+		}
+		// --- Validation Callback --- END ---
 
-		// TODO(manuel, 2024-08-05) Add check for explicit next_step field or callback result
+		// Determine the next step
+		var nextStepIndex int
+
+		// --- Navigation Callback --- START ---
+		if navigationCallbackName := step.NavigationCallback(); navigationCallbackName != "" {
+			callback, found := w.callbacks[navigationCallbackName]
+			if !found {
+				fmt.Printf("Warning: 'navigation' callback '%s' for step '%s' not registered. Using default navigation.\n", navigationCallbackName, step.ID())
+			} else {
+				fmt.Printf("Executing 'navigation' callback '%s' for step '%s'\n", navigationCallbackName, step.ID())
+				_, nextStepIDPtr, err := callback(ctx, wizardState)
+				if err != nil {
+					// Error in navigation is critical
+					return wizardState, errors.Wrapf(err, "'navigation' callback '%s' for step '%s' failed", navigationCallbackName, step.ID())
+				}
+				if nextStepIDPtr != nil {
+					*nextStepIDOverride = *nextStepIDPtr // Capture the override
+					fmt.Printf("Navigation callback '%s' requests jump to step: %s\n", navigationCallbackName, *nextStepIDOverride)
+				} else {
+					fmt.Printf("Navigation callback '%s' did not specify a next step. Using default flow.\n", navigationCallbackName)
+				}
+			}
+		}
+		// --- Navigation Callback --- END ---
+
+		// --- Navigation Logic --- START ---
+		if *nextStepIDOverride != "" {
+			// Find the index for the requested step ID
+			foundIndex := -1
+			for i, s := range w.Steps {
+				if s.ID() == *nextStepIDOverride {
+					foundIndex = i
+					break
+				}
+			}
+			if foundIndex == -1 {
+				return wizardState, errors.Errorf("navigation callback requested jump to non-existent step ID: '%s' from step '%s'", *nextStepIDOverride, step.ID())
+			}
+			nextStepIndex = foundIndex
+			fmt.Printf("Navigating to step index %d (ID: %s) based on callback override.\n", nextStepIndex, *nextStepIDOverride)
+		} else {
+			// TODO(manuel, 2024-08-06) Add logic for next_step_map (decision) and next_step field here
+			// Default linear progression if no override or specific field
+			nextStepIndex = currentStepIndex + 1
+			if nextStepIndex < len(w.Steps) {
+				fmt.Printf("Navigating linearly to next step index %d (ID: %s).\n", nextStepIndex, w.Steps[nextStepIndex].ID())
+			} else {
+				fmt.Println("Reached end of steps.")
+			}
+		}
+		// --- Navigation Logic --- END ---
 
 		currentStepIndex = nextStepIndex
 	}
