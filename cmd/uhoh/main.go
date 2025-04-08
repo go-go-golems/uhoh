@@ -17,14 +17,17 @@ import (
 	"github.com/go-go-golems/uhoh/pkg"
 	"github.com/go-go-golems/uhoh/pkg/cmds"
 	"github.com/go-go-golems/uhoh/pkg/doc"
+	"github.com/go-go-golems/uhoh/pkg/wizard"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
 	clay "github.com/go-go-golems/clay/pkg"
+	clay_repositories "github.com/go-go-golems/clay/pkg/cmds/repositories"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	glazed_cmds "github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/alias"
 	"github.com/go-go-golems/glazed/pkg/cmds/loaders"
+	"github.com/go-go-golems/glazed/pkg/cmds/logging"
 	"github.com/go-go-golems/glazed/pkg/help"
 	"github.com/pkg/errors"
 	"github.com/pkg/profile"
@@ -40,7 +43,12 @@ var rootCmd = &cobra.Command{
 	Use:     "uhoh",
 	Short:   "uhoh is a tool to help you run forms",
 	Version: version,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		err := logging.InitLoggerFromViper()
+		if err != nil {
+			return err
+		}
+
 		memProfile, _ := cmd.Flags().GetBool("mem-profile")
 		if memProfile {
 			log.Info().Msg("Starting memory profiler")
@@ -56,6 +64,7 @@ var rootCmd = &cobra.Command{
 				}
 			}()
 		}
+		return nil
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		if profiler != nil {
@@ -286,6 +295,44 @@ func runTestStream(cmd *cobra.Command, args []string) {
 	runStreamWithReader(r, errorBehavior)
 }
 
+var runWizardCmd = &cobra.Command{
+	Use:   "run-wizard [flags] <file>",
+	Short: "Run a wizard defined in a YAML file",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		wizardFilePath := args[0]
+
+		// Read the wizard file
+		data, err := os.ReadFile(wizardFilePath)
+		if err != nil {
+			log.Fatal().Err(err).Msgf("Error reading wizard file: %s", wizardFilePath)
+		}
+
+		// Unmarshal the wizard definition
+		var wz wizard.Wizard
+		err = yaml.Unmarshal(data, &wz)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Error parsing wizard YAML")
+		}
+
+		// Run the wizard (basic single-step implementation)
+		values, err := wz.Run(context.Background())
+		if err != nil {
+			log.Fatal().Err(err).Msg("Error running wizard")
+		}
+
+		// Print the results
+		fmt.Println("\nWizard Results:")
+		if len(values) == 0 {
+			fmt.Println("(No data collected)")
+		} else {
+			for key, value := range values {
+				fmt.Printf("%s: %v\n", key, value)
+			}
+		}
+	},
+}
+
 func main() {
 	helpSystem := help.NewHelpSystem()
 	err := doc.AddDocToHelpSystem(helpSystem)
@@ -299,7 +346,9 @@ func main() {
 	rootCmd.AddCommand(runCommandCmd)
 	rootCmd.AddCommand(ExampleCommand())
 	rootCmd.AddCommand(streamCmd)
-	rootCmd.AddCommand(testStreamCmd) // Add the new test-stream command
+	rootCmd.AddCommand(testStreamCmd)
+	rootCmd.AddCommand(runWizardCmd)
+	rootCmd.AddCommand(clay_repositories.NewRepositoriesGroupCommand())
 
 	rootCmd.PersistentFlags().Bool("mem-profile", false, "Enable memory profiling")
 

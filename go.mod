@@ -1,6 +1,6 @@
 module github.com/go-go-golems/uhoh
 
-go 1.23
+go 1.24.2
 
 toolchain go1.23.7
 
