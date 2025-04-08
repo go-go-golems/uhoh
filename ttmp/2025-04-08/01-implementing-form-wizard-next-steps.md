@@ -56,7 +56,7 @@ The core task is to implement the logic described in the DSL specification withi
     - Define Go structs for each step type (`FormStep`, `DecisionStep`, `ActionStep`, `InfoStep`, `SummaryStep`) inheriting common fields (ID, Title, etc.).
     - Implement custom YAML unmarshalling for the `Wizard.Steps` field to correctly parse the `type` field and unmarshal into the appropriate Go struct type. This avoids the current `map[string]interface{}` approach.
 
-3.  **[ ] Implement State Management:**
+3.  **[x] Implement State Management:**
 
     - Initialize the wizard state map (potentially pre-populating with `global_state` from YAML).
     - Pass the state map to steps that need it.

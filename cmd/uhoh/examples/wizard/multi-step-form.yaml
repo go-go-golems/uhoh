@@ -1,0 +1,56 @@
+name: Multi-Step Form Wizard
+description: A wizard with multiple form steps demonstrating linear progression.
+theme: Default
+
+steps:
+  - id: personal-info
+    type: form
+    title: Personal Information
+    description: Let's start with your basic details.
+    form:
+      groups:
+        - fields:
+            - key: name
+              type: input
+              title: Full Name
+              value: ""
+            - key: email
+              type: input
+              title: Email Address
+              value: ""
+
+  - id: address-info
+    type: form
+    title: Address Information
+    description: Now, tell us where you live.
+    form:
+      groups:
+        - fields:
+            - key: street
+              type: input
+              title: Street Address
+              value: ""
+            - key: city
+              type: input
+              title: City
+              value: ""
+            - key: country
+              type: select
+              title: Country
+              options:
+                - label: United States
+                  value: us
+                - label: Canada
+                  value: ca
+                - label: United Kingdom
+                  value: uk
+                - label: Other
+                  value: other
+
+  - id: confirmation
+    type: info
+    title: Thank You
+    content: |
+      Thanks for providing your information!
+
+      We've recorded your details and will follow up shortly.
