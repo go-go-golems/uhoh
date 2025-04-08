@@ -2,9 +2,9 @@ package steps
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -83,6 +83,7 @@ func (bs *BaseStep) NavigationCallback() string {
 
 // Placeholder Execute for BaseStep - concrete types should override this.
 func (bs *BaseStep) Execute(ctx context.Context, state map[string]interface{}) (map[string]interface{}, error) {
+	log.Error().Str("stepId", bs.ID()).Str("stepType", bs.Type()).Msg("Execute not implemented for step")
 	return nil, errors.Errorf("Execute not implemented for step type %s (ID: %s)", bs.Type(), bs.ID())
 }
 
@@ -147,7 +148,8 @@ func UnmarshalStepYAML(node *yaml.Node) (Step, error) {
 		// Try decoding into BaseStep to get ID for error message if possible
 		var base BaseStep
 		_ = node.Decode(&base) // Ignore error here, just for context
-		return nil, fmt.Errorf("unknown step type '%s' for step ID '%s'", typeFinder.Type, base.ID())
+		log.Error().Str("stepType", typeFinder.Type).Str("stepId", base.ID()).Msg("Unknown step type encountered during YAML unmarshal")
+		return nil, errors.Errorf("unknown step type '%s' for step ID '%s'", typeFinder.Type, base.ID())
 	}
 
 	// Check if the decoded step is nil (could happen with empty YAML sections)
@@ -171,9 +173,11 @@ func (w *WizardSteps) UnmarshalYAML(node *yaml.Node) error {
 			// Try to get context from the node for better error reporting
 			var base BaseStep
 			_ = stepNode.Decode(&base) // Ignore error, just for ID/type context
+			log.Error().Err(err).Str("approxId", base.ID()).Str("approxType", base.Type()).Msg("Failed to unmarshal step in sequence")
 			return errors.Wrapf(err, "failed to unmarshal step (approx ID: %s, type from context: %s)", base.ID(), base.Type())
 		}
 		if step == nil {
+			log.Error().Msg("Unmarshalled step is nil")
 			// This case might occur if UnmarshalStepYAML returns nil, nil
 			return errors.New("unmarshalled step is nil, check step definitions and UnmarshalStepYAML logic")
 		}

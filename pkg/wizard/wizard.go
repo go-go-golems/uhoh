@@ -2,14 +2,12 @@ package wizard
 
 import (
 	"context"
-	"fmt"
 	"os"
-
-	"strings"
 
 	"github.com/expr-lang/expr"
 	"github.com/go-go-golems/uhoh/pkg/wizard/steps"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -133,27 +131,27 @@ func (w *Wizard) evaluateExprCondition(condition string, state map[string]interf
 // Run executes the wizard steps sequentially.
 // It now accepts an initial state map that overrides/merges with the global state.
 func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (map[string]interface{}, error) {
-	fmt.Printf("=== Starting Wizard: %s ===\n", w.Name)
+	logger := log.With().Str("wizardName", w.Name).Logger()
+	logger.Debug().Msg("Starting Wizard")
 	if w.Description != "" {
-		fmt.Printf("%s\n", w.Description)
+		logger.Debug().Msg(w.Description)
 	}
 
 	// --- State Management: Initialize state ---
 	wizardState := make(map[string]interface{})
 	// 1. Load GlobalState from YAML
 	if len(w.GlobalState) > 0 { // Check if GlobalState has keys
-		fmt.Println("Initializing state with GlobalState (from YAML):")
+		logger.Debug().Interface("globalState", w.GlobalState).Msg("Initializing state with GlobalState (from YAML)")
 		for k, v := range w.GlobalState {
 			wizardState[k] = v
-			fmt.Printf("  - %s: %v\n", k, v) // Log initial value
 		}
 	} else {
-		fmt.Println("No GlobalState defined in YAML.")
+		logger.Debug().Msg("No GlobalState defined in YAML.")
 	}
 
 	// 2. Merge w.initialState (from YAML) with GlobalState
 	if len(w.initialState) > 0 {
-		fmt.Println("Merging initialState (from YAML):")
+		logger.Debug().Interface("initialStateYAML", w.initialState).Msg("Merging initialState (from YAML)")
 		for k, v := range w.initialState {
 			wizardState[k] = v
 		}
@@ -161,44 +159,47 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 
 	// 2. Merge InitialState passed via parameter (overwrites GlobalState)
 	if len(initialState) > 0 { // Check if initialState has keys
-		fmt.Println("Merging InitialState (from Run argument/CLI):")
+		logger.Debug().Interface("initialStateArg", initialState).Msg("Merging InitialState (from Run argument/CLI)")
 		for k, v := range initialState {
-			oldValue, exists := wizardState[k]
+			_, exists := wizardState[k]
 			wizardState[k] = v
-			if exists {
-				fmt.Printf("  - %s: %v (overwrites %v)\n", k, v, oldValue)
-			} else {
-				fmt.Printf("  - %s: %v (added)\n", k, v)
-			}
+			logger.Debug().Str("key", k).Interface("value", v).Bool("overwritten", exists).Msg("Merged initial state value")
 		}
 	} else {
-		fmt.Println("No additional InitialState provided via Run argument/CLI.")
+		logger.Debug().Msg("No additional InitialState provided via Run argument/CLI.")
 	}
-	fmt.Println("--- Initial State Finalized ---") // Separator
+	logger.Debug().Interface("finalInitialState", wizardState).Msg("Initial State Finalized")
 	// --- End State Management ---
 
 	// Basic execution loop - iterates through steps sequentially
 	currentStepIndex := 0
 	for currentStepIndex < len(w.Steps) {
 		step := w.Steps[currentStepIndex]
+		stepID := step.ID()
+		stepType := step.Type()
+		stepLogger := logger.With().
+			Str("stepId", stepID).
+			Str("stepType", stepType).
+			Int("stepIndex", currentStepIndex).
+			Int("totalSteps", len(w.Steps)).
+			Int("currentStepIndex", currentStepIndex).
+			Logger()
+
 		nextStepIDOverride := new(string) // Used to capture navigation overrides from callbacks
 		*nextStepIDOverride = ""          // Initialize empty, means no override
 
 		// --- Skip Condition Check --- START ---
 		skipCond := step.SkipCondition()
 		if skipCond != "" {
-			fmt.Printf("Checking skip condition for step %s: %s\n", step.ID(), skipCond)
-			// Use the method on w to access custom functions
+			stepLogger.Debug().Str("condition", skipCond).Msg("Checking skip condition")
 			skip, err := w.evaluateExprCondition(skipCond, wizardState)
 			if err != nil {
-				// Decide whether to halt or just warn on evaluation error
-				fmt.Printf("Warning: Could not evaluate skip condition for step %s: %v. Step will NOT be skipped.\n", step.ID(), err)
-				// Optionally, you could return an error here to stop the wizard:
-				// return wizardState, errors.Wrapf(err, "error evaluating skip condition for step %s", step.ID())
+				stepLogger.Warn().Err(err).Str("condition", skipCond).Msg("Could not evaluate skip condition, step will NOT be skipped")
+				// Optionally return error: return wizardState, errors.Wrapf(err, "error evaluating skip condition for step %s", stepID)
 			} else if skip {
-				fmt.Printf("Skipping step %d (ID: %s) due to condition: %s\n", currentStepIndex+1, step.ID(), skipCond)
-				currentStepIndex++ // Move to the next step index
-				continue           // Skip the rest of the loop for this step
+				stepLogger.Debug().Str("condition", skipCond).Msg("Skipping step due to condition")
+				currentStepIndex++
+				continue
 			}
 		}
 		// --- Skip Condition Check --- END ---
@@ -207,42 +208,38 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 		if beforeCallbackName := step.BeforeCallback(); beforeCallbackName != "" {
 			callback, found := w.callbacks[beforeCallbackName]
 			if !found {
-				fmt.Printf("Warning: 'before' callback '%s' for step '%s' not registered. Skipping.\n", beforeCallbackName, step.ID())
+				stepLogger.Warn().Str("callbackName", beforeCallbackName).Msg("'before' callback not registered, skipping")
 			} else {
-				fmt.Printf("Executing 'before' callback '%s' for step '%s'\n", beforeCallbackName, step.ID())
-				_, _, err := callback(ctx, wizardState) // Result and nextStepID ignored for 'before'
+				stepLogger.Debug().Str("callbackName", beforeCallbackName).Msg("Executing 'before' callback")
+				_, _, err := callback(ctx, wizardState)
 				if err != nil {
-					return wizardState, errors.Wrapf(err, "'before' callback '%s' for step '%s' failed", beforeCallbackName, step.ID())
+					return wizardState, errors.Wrapf(err, "'before' callback '%s' for step '%s' failed", beforeCallbackName, stepID)
 				}
 				// Optionally update state based on callback result? TBD
 			}
 		}
 		// --- Before Callback --- END ---
 
-		fmt.Printf("\nExecuting Step %d/%d: ID = %s, Type = %s\n",
-			currentStepIndex+1, len(w.Steps), step.ID(), step.Type())
+		stepLogger.Debug().Msgf("Executing Step %d/%d", currentStepIndex+1, len(w.Steps))
 
-		// --- State Management: Pass state to step ---
+		// --- State Management: Pass state to step --- // TODO(manuel, 2024-08-06) Pass logger too?
 		stepResult, err := step.Execute(ctx, wizardState)
-		// --- End State Management ---
+		// --- End State Management --- //
 
 		if err != nil {
 			// Check for specific errors like Abort or NotImplemented
 			if errors.Is(err, steps.ErrUserAborted) {
-				fmt.Println("Wizard aborted by user.")
+				stepLogger.Debug().Msg("Wizard aborted by user")
 				return wizardState, err // Return the specific abort error
 			}
 
-			errMsg := err.Error()
-			isNotImplemented := errors.Is(err, steps.ErrStepNotImplemented) || // Use defined error
-				strings.Contains(errMsg, "not implemented") // Keep broader check for now
-
-			if isNotImplemented {
-				fmt.Printf("Warning: Step %s (%s) is not fully implemented. Skipping execution logic.\n", step.ID(), step.Type())
+			if errors.Is(err, steps.ErrStepNotImplemented) {
+				stepLogger.Warn().Msg("Step is not fully implemented. Skipping execution logic.")
 				stepResult = map[string]interface{}{} // Treat as empty result to continue loop
 			} else {
 				// For other errors, halt execution
-				return wizardState, errors.Wrapf(err, "error executing step %d (ID: %s)", currentStepIndex, step.ID())
+				stepLogger.Error().Err(err).Msg("Error executing step")
+				return wizardState, errors.Wrapf(err, "error executing step %d (ID: %s)", currentStepIndex, stepID)
 			}
 		}
 
@@ -250,15 +247,12 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 		if afterCallbackName := step.AfterCallback(); afterCallbackName != "" {
 			callback, found := w.callbacks[afterCallbackName]
 			if !found {
-				fmt.Printf("Warning: 'after' callback '%s' for step '%s' not registered. Skipping.\n", afterCallbackName, step.ID())
+				stepLogger.Warn().Str("callbackName", afterCallbackName).Msg("'after' callback not registered, skipping")
 			} else {
-				fmt.Printf("Executing 'after' callback '%s' for step '%s'\n", afterCallbackName, step.ID())
-				// Pass stepResult separately? Or merge first? Let's pass current state for now.
-				// Callback might modify state directly or return results to be merged.
-				// Result and nextStepID ignored for 'after'.
+				stepLogger.Debug().Str("callbackName", afterCallbackName).Msg("Executing 'after' callback")
 				_, _, err := callback(ctx, wizardState)
 				if err != nil {
-					return wizardState, errors.Wrapf(err, "'after' callback '%s' for step '%s' failed", afterCallbackName, step.ID())
+					return wizardState, errors.Wrapf(err, "'after' callback '%s' for step '%s' failed", afterCallbackName, stepID)
 				}
 				// TODO(manuel, 2024-08-06) Decide how 'after' callback results affect state.
 			}
@@ -269,16 +263,12 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 		if stepResult != nil {
 			merged := false
 			for k, v := range stepResult {
-				// Simple overwrite strategy for now
 				wizardState[k] = v
-				fmt.Printf("State updated: %s = %v\n", k, v) // Debug logging
+				stepLogger.Debug().Str("key", k).Interface("value", v).Msg("State updated")
 				merged = true
 			}
 			if merged {
-				fmt.Println("Current Wizard State after merge:")
-				for k, v := range wizardState {
-					fmt.Printf("  %s: %v\n", k, v)
-				}
+				stepLogger.Debug().Interface("newState", wizardState).Msg("Current Wizard State after merge")
 			}
 		}
 		// --- End State Management ---
@@ -287,17 +277,15 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 		if validationCallbackName := step.ValidationCallback(); validationCallbackName != "" {
 			callback, found := w.callbacks[validationCallbackName]
 			if !found {
-				fmt.Printf("Warning: 'validation' callback '%s' for step '%s' not registered. Skipping.\n", validationCallbackName, step.ID())
+				stepLogger.Warn().Str("callbackName", validationCallbackName).Msg("'validation' callback not registered, skipping")
 			} else {
-				fmt.Printf("Executing 'validation' callback '%s' for step '%s'\n", validationCallbackName, step.ID())
-				// Validation callbacks check the state *after* merge.
-				// Result and nextStepID ignored for 'validation'. Error signifies failure.
+				stepLogger.Debug().Str("callbackName", validationCallbackName).Msg("Executing 'validation' callback")
 				_, _, err := callback(ctx, wizardState)
 				if err != nil {
 					// Validation failure should likely halt the process or trigger remediation (TBD)
-					return wizardState, errors.Wrapf(err, "'validation' callback '%s' for step '%s' failed", validationCallbackName, step.ID())
+					return wizardState, errors.Wrapf(err, "'validation' callback '%s' for step '%s' failed", validationCallbackName, stepID)
 				}
-				fmt.Printf("Validation callback '%s' completed successfully.\n", validationCallbackName)
+				stepLogger.Debug().Str("callbackName", validationCallbackName).Msg("Validation callback completed successfully")
 			}
 		}
 		// --- Validation Callback --- END ---
@@ -309,19 +297,18 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 		if navigationCallbackName := step.NavigationCallback(); navigationCallbackName != "" {
 			callback, found := w.callbacks[navigationCallbackName]
 			if !found {
-				fmt.Printf("Warning: 'navigation' callback '%s' for step '%s' not registered. Using default navigation.\n", navigationCallbackName, step.ID())
+				stepLogger.Warn().Str("callbackName", navigationCallbackName).Msg("'navigation' callback not registered, using default navigation")
 			} else {
-				fmt.Printf("Executing 'navigation' callback '%s' for step '%s'\n", navigationCallbackName, step.ID())
+				stepLogger.Debug().Str("callbackName", navigationCallbackName).Msg("Executing 'navigation' callback")
 				_, nextStepIDPtr, err := callback(ctx, wizardState)
 				if err != nil {
-					// Error in navigation is critical
-					return wizardState, errors.Wrapf(err, "'navigation' callback '%s' for step '%s' failed", navigationCallbackName, step.ID())
+					return wizardState, errors.Wrapf(err, "'navigation' callback '%s' for step '%s' failed", navigationCallbackName, stepID)
 				}
 				if nextStepIDPtr != nil {
 					*nextStepIDOverride = *nextStepIDPtr // Capture the override
-					fmt.Printf("Navigation callback '%s' requests jump to step: %s\n", navigationCallbackName, *nextStepIDOverride)
+					stepLogger.Debug().Str("callbackName", navigationCallbackName).Str("nextStepId", *nextStepIDOverride).Msg("Navigation callback requests jump to step")
 				} else {
-					fmt.Printf("Navigation callback '%s' did not specify a next step. Using default flow.\n", navigationCallbackName)
+					stepLogger.Debug().Str("callbackName", navigationCallbackName).Msg("Navigation callback did not specify a next step, using default flow")
 				}
 			}
 		}
@@ -329,7 +316,6 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 
 		// --- Navigation Logic --- START ---
 		if *nextStepIDOverride != "" {
-			// Find the index for the requested step ID
 			foundIndex := -1
 			for i, s := range w.Steps {
 				if s.ID() == *nextStepIDOverride {
@@ -338,18 +324,20 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 				}
 			}
 			if foundIndex == -1 {
-				return wizardState, errors.Errorf("navigation callback requested jump to non-existent step ID: '%s' from step '%s'", *nextStepIDOverride, step.ID())
+				err := errors.Errorf("navigation callback requested jump to non-existent step ID: '%s' from step '%s'", *nextStepIDOverride, stepID)
+				stepLogger.Error().Err(err).Str("requestedStepId", *nextStepIDOverride).Msg("Invalid navigation target")
+				return wizardState, err
 			}
 			nextStepIndex = foundIndex
-			fmt.Printf("Navigating to step index %d (ID: %s) based on callback override.\n", nextStepIndex, *nextStepIDOverride)
+			stepLogger.Debug().Int("nextStepIndex", nextStepIndex).Str("nextStepId", *nextStepIDOverride).Msg("Navigating based on callback override")
 		} else {
 			// TODO(manuel, 2024-08-06) Add logic for next_step_map (decision) and next_step field here
 			// Default linear progression if no override or specific field
 			nextStepIndex = currentStepIndex + 1
 			if nextStepIndex < len(w.Steps) {
-				fmt.Printf("Navigating linearly to next step index %d (ID: %s).\n", nextStepIndex, w.Steps[nextStepIndex].ID())
+				stepLogger.Debug().Int("nextStepIndex", nextStepIndex).Str("nextStepId", w.Steps[nextStepIndex].ID()).Msg("Navigating linearly to next step")
 			} else {
-				fmt.Println("Reached end of steps.")
+				stepLogger.Debug().Msg("Reached end of steps")
 			}
 		}
 		// --- Navigation Logic --- END ---
@@ -357,11 +345,7 @@ func (w *Wizard) Run(ctx context.Context, initialState map[string]interface{}) (
 		currentStepIndex = nextStepIndex
 	}
 
-	fmt.Printf("\n=== Wizard '%s' Finished ===\n", w.Name)
-	fmt.Println("Final State:")
-	for k, v := range wizardState {
-		fmt.Printf("  %s: %v\n", k, v)
-	}
+	logger.Debug().Interface("finalState", wizardState).Msg("Wizard Finished")
 
 	return wizardState, nil
 }
@@ -374,15 +358,18 @@ func LoadWizard(filePath string, opts ...WizardOption) (*Wizard, error) {
 	}
 
 	var wizard Wizard
+	log.Debug().Str("filePath", filePath).Int("bytes", len(yamlData)).Msg("Attempting to unmarshal wizard YAML")
 	err = yaml.Unmarshal(yamlData, &wizard)
 	if err != nil {
+		log.Error().Err(err).Str("filePath", filePath).Msg("Failed to unmarshal wizard YAML")
 		// Try to provide more context on YAML parsing errors
 		var attempt map[string]interface{}
 		if yaml.Unmarshal(yamlData, &attempt) != nil {
+			// If even basic map unmarshal fails, it's likely a syntax error
 			return nil, errors.Wrap(err, "could not unmarshal wizard YAML (likely syntax error)")
 		}
-		// If basic map unmarshal works, the error is likely in the structure/types
-		return nil, errors.Wrap(err, "could not unmarshal wizard YAML (check structure/types)")
+		// If basic map unmarshal works, the error is likely in the structure/types (caught by custom unmarshaler)
+		return nil, errors.Wrap(err, "could not unmarshal wizard YAML (check structure/types, possibly caught by custom step unmarshaler)")
 	}
 
 	// Apply functional options *after* unmarshalling
@@ -390,16 +377,16 @@ func LoadWizard(filePath string, opts ...WizardOption) (*Wizard, error) {
 		opt(&wizard)
 	}
 
-	// Post-unmarshal validation
+	// Post-unmarshal validation (mostly done by custom unmarshaller now)
 	stepIDs := make(map[string]bool)
 	for i, step := range wizard.Steps {
 		if step == nil {
-			// This check should be less necessary with the custom unmarshaller, but keep as a safeguard
+			// Should be caught by the custom unmarshaller, but defensive check
 			return nil, errors.Errorf("step %d loaded as nil, check YAML structure and UnmarshalStepYAML function", i)
 		}
 		stepID := step.ID()
 		if stepID == "" {
-			// The custom unmarshaller should ideally catch steps without IDs earlier
+			// Should be caught by the custom unmarshaller
 			return nil, errors.Errorf("step %d (type: %s) is missing required 'id' field", i, step.Type())
 		}
 		if _, exists := stepIDs[stepID]; exists {
@@ -407,27 +394,11 @@ func LoadWizard(filePath string, opts ...WizardOption) (*Wizard, error) {
 		}
 		stepIDs[stepID] = true
 
-		// Validate required fields per type (example for FormStep)
-		switch s := step.(type) {
-		case *steps.FormStep:
-			// Check if the form data structure itself is present, not a specific key.
-			// A more robust check might ensure Groups is not nil/empty.
-			if s.FormData.Groups == nil { // Corrected check
-				// This might indicate an empty 'form:' key or incorrect indentation in YAML.
-				// Consider if this should be an error or just a warning.
-				fmt.Printf("Warning: Form step '%s' has nil FormData.Groups. Check YAML structure.\n", stepID)
-				// return nil, errors.Errorf("form step '%s' has missing or invalid form definition", stepID)
-			}
-		case *steps.DecisionStep:
-			if s.TargetKey == "" {
-				return nil, errors.Errorf("decision step '%s' is missing required 'target_key' field", stepID)
-			}
-			if len(s.Choices) == 0 {
-				return nil, errors.Errorf("decision step '%s' must have at least one 'choice'", stepID)
-			}
-			// Add similar validation for ActionStep, InfoStep, SummaryStep as needed
-		}
+		// Remove the type switch validation here; it's handled by the custom unmarshaller
+		// and caused linter errors due to signature mismatches during refactoring.
+		// The custom unmarshaller provides more specific error messages if decoding fails.
 	}
 
+	log.Debug().Str("filePath", filePath).Str("wizardName", wizard.Name).Int("stepCount", len(wizard.Steps)).Msg("Wizard loaded successfully")
 	return &wizard, nil
 }

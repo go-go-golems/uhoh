@@ -2,9 +2,8 @@ package steps
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // DecisionStep represents a step where the user makes a choice.
@@ -19,14 +18,14 @@ type DecisionStep struct {
 var _ Step = &DecisionStep{}
 
 func (ds *DecisionStep) Execute(ctx context.Context, state map[string]interface{}) (map[string]interface{}, error) {
-	fmt.Printf("\n--- Step: %s ---\n", ds.Title())
+	log.Debug().Str("stepId", ds.ID()).Msgf("--- Step: %s ---", ds.Title())
 	// TODO(manuel, 2024-08-05) Implement decision logic (present choices, get input)
-	fmt.Println("Decision Step (Not Implemented)")
+	log.Warn().Str("stepId", ds.ID()).Msg("Decision Step (Not Implemented)")
 	// Placeholder: return empty results for now
 	stepResult := map[string]interface{}{}
 	// Simulate setting the target key based on a hypothetical choice
 	// stepResult[ds.TargetKey] = "dummy_choice"
-	return stepResult, errors.New("decision step not implemented")
+	return stepResult, ErrStepNotImplemented // Use standard error
 }
 
 func (ds *DecisionStep) GetBaseStep() *BaseStep {

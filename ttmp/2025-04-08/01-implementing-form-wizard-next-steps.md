@@ -73,7 +73,7 @@ The core task is to implement the logic described in the DSL specification withi
     - Handle `skip_condition` evaluation before executing a step.
     - Determine the _next_ step based on (in order of precedence): `navigation` callback result, `next_step_map` (for `decision` steps), explicit `next_step` field, or default linear progression.
 
-6.  **[ ] Implement Callback System:**
+6.  **[x] Implement Callback System:**
 
     - Design a mechanism to register Go functions (callbacks) by name (e.g., a `map[string]WizardCallbackFunc`).
     - Define the `WizardCallbackFunc` signature (e.g., `func(ctx context.Context, state map[string]interface{}) (result interface{}, nextStepID *string, err error)` - adapt as needed).

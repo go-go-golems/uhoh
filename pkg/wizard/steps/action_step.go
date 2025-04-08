@@ -2,9 +2,8 @@ package steps
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 // ActionStep represents a step that performs a backend action.
@@ -20,16 +19,16 @@ type ActionStep struct {
 var _ Step = &ActionStep{}
 
 func (as *ActionStep) Execute(ctx context.Context, state map[string]interface{}) (map[string]interface{}, error) {
-	fmt.Printf("\n--- Step: %s ---\n", as.Title())
+	log.Debug().Str("stepId", as.ID()).Msgf("--- Step: %s ---", as.Title())
 	// TODO(manuel, 2024-08-05) Implement action execution logic (callbacks, API calls)
-	fmt.Println("Action Step (Not Implemented)")
+	log.Warn().Str("stepId", as.ID()).Msg("Action Step (Not Implemented)")
 	// Placeholder: return empty results
 	stepResult := map[string]interface{}{}
 	// Simulate putting a result in the output key
 	// if as.OutputKey != "" {
 	// 	stepResult[as.OutputKey] = "action_result_placeholder"
 	// }
-	return stepResult, errors.New("action step not implemented")
+	return stepResult, ErrStepNotImplemented // Use standard error
 }
 
 func (as *ActionStep) GetBaseStep() *BaseStep {
