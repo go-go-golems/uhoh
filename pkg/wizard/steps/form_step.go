@@ -21,8 +21,8 @@ func (fs *FormStep) Execute(ctx context.Context, state map[string]interface{}) (
 	// TODO(manuel, 2024-08-05) Consider passing state into the form for defaults/pre-population
 	// TODO(manuel, 2024-08-05) Add step title/description rendering
 	fmt.Printf("\n--- Step: %s ---\n", fs.Title())
-	if fs.Description != "" {
-		fmt.Printf("%s\n", fs.Description)
+	if fs.Description() != "" {
+		fmt.Printf("%s\n", fs.Description())
 	}
 
 	// Run the actual form

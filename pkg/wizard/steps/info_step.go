@@ -15,8 +15,8 @@ var _ Step = &InfoStep{}
 
 func (is *InfoStep) Execute(ctx context.Context, state map[string]interface{}) (map[string]interface{}, error) {
 	fmt.Printf("\n--- Step: %s ---\n", is.Title())
-	if is.Description != "" {
-		fmt.Printf("%s\n", is.Description)
+	if is.Description() != "" {
+		fmt.Printf("%s\n", is.Description())
 	}
 	fmt.Println(is.Content)
 	// Info steps typically don't modify state

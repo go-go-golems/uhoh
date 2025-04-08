@@ -1,0 +1,34 @@
+name: Combined Conditions Example
+description: Uses initial state and potentially custom functions for skipping.
+
+# Run with:
+# ./uhoh run-wizard examples/wizard/conditions/combined_conditions.yaml --initial-state '{"feature_flag_X": true, "user_level": 5}'
+
+# Assumes a custom function 'isBetaUser(level)' might be registered.
+
+global_state:
+  system_status: "OK"
+
+steps:
+  - id: step1
+    type: info
+    title: Initial Check
+    content: "Checking system and flags..."
+    # Skip if system is not OK OR feature flag X is not enabled
+    skip_condition: 'system_status != "OK" or !feature_flag_X'
+
+  - id: step2_beta
+    type: info
+    title: Beta Feature Info
+    content: "This is for beta users (level > 10 or using isBetaUser func)."
+    # Skip if user level is not high enough AND the custom function (if registered) returns false.
+    # This shows handling potential absence of the function gracefully.
+    # 'isBetaUser' in state checks if the function is registered (this is a convention, not built-in expr)
+    # skip_condition: 'user_level <= 10 and (!("isBetaUser" in state) or !isBetaUser(user_level))'
+    # Simpler version without checking for function existence (will error if not registered):
+    skip_condition: 'user_level <= 10' # Keep it simple for now until function registration CLI is done
+
+  - id: step3_final
+    type: info
+    title: Final Step
+    content: "Wizard concluding." 

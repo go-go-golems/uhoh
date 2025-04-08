@@ -2,8 +2,6 @@ module github.com/go-go-golems/uhoh
 
 go 1.24.2
 
-toolchain go1.23.7
-
 require (
 	github.com/charmbracelet/huh v0.6.0
 	github.com/go-go-golems/clay v0.1.34
@@ -42,6 +40,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
+	github.com/expr-lang/expr v1.17.2 // indirect
 	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-openapi/errors v0.22.0 // indirect

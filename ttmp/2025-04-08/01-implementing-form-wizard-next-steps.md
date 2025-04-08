@@ -62,7 +62,7 @@ The core task is to implement the logic described in the DSL specification withi
     - Pass the state map to steps that need it.
     - Define how step outputs (e.g., form results, action results) update the state map.
 
-4.  **[ ] Integrate @Expr:**
+4.  **[x] Integrate @Expr:**
 
     - Add `github.com/expr-lang/expr` as a dependency.
     - Create helper functions to evaluate `@Expr` conditions (`skip_condition`, `visible_condition`, etc.) against the current wizard state map.
