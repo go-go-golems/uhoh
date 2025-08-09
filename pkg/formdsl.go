@@ -223,9 +223,18 @@ func (f *Form) BuildBubbleTeaModel() (*huh.Form, map[string]interface{}, error) 
 				huhField = text
 
 			case "select":
+				opts := createOptions(field.Options)
+				if len(opts) == 0 {
+					// Avoid rendering empty select which can crash; use a note placeholder instead
+					note := huh.NewNote().
+						Title(field.Title).
+						Description(field.Description)
+					huhField = note
+					break
+				}
 				select_ := huh.NewSelect[string]().
 					Title(field.Title).
-					Options(createOptions(field.Options)...).
+					Options(opts...).
 					Value(values[field.Key].(*string))
 				if field.SelectAttributes != nil {
 					select_ = select_.Inline(field.SelectAttributes.Inline)
