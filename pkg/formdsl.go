@@ -1,12 +1,13 @@
 package pkg
 
 import (
-	"context"
-	"fmt"
-	"strings"
+    "context"
+    "fmt"
+    "strings"
 
-	"github.com/charmbracelet/huh"
-	"github.com/pkg/errors"
+    "github.com/charmbracelet/huh"
+    "github.com/pkg/errors"
+    "gopkg.in/yaml.v3"
 )
 
 type Form struct {
@@ -104,6 +105,283 @@ type FieldWithValidation interface {
 
 func addValidation(field huh.Field, validations []*Validation) (huh.Field, error) {
 	return nil, errors.New("not implemented")
+}
+
+// BuildBubbleTeaModel constructs a huh.Form (which implements tea.Model) from the
+// Uhoh Form without running it. It also returns the internal values map that
+// holds pointers to the bound variables. When the returned huh.Form is driven
+// to completion inside a parent Bubble Tea application, you can call
+// ExtractFinalValues(values) to retrieve a plain map of final values.
+func (f *Form) BuildBubbleTeaModel() (*huh.Form, map[string]interface{}, error) {
+    // Create a map to store pointers to the input values
+    values := make(map[string]interface{})
+
+    // Create huh Form groups
+    var huhGroups []*huh.Group
+
+    // Iterate through groups and fields to build the huh Form
+    for _, group := range f.Groups {
+        huhFields := make([]huh.Field, 0, len(group.Fields))
+
+        for _, field := range group.Fields {
+            // Initialize target variables and store pointer in map
+            switch field.Type {
+            case "input", "text", "select", "filepicker":
+                var strValue string
+                if field.Value != nil {
+                    if val, ok := field.Value.(string); ok {
+                        strValue = val
+                    } else {
+                        strValue = fmt.Sprintf("%v", field.Value)
+                    }
+                }
+                values[field.Key] = &strValue
+            case "multiselect":
+                var strSliceValue []string
+                if field.Value != nil {
+                    if valSlice, ok := field.Value.([]interface{}); ok {
+                        for _, item := range valSlice {
+                            strSliceValue = append(strSliceValue, fmt.Sprintf("%v", item))
+                        }
+                    } else if valStrSlice, ok := field.Value.([]string); ok {
+                        strSliceValue = valStrSlice
+                    } else {
+                        fmt.Printf("Warning: Unexpected type for multiselect default value: %T\n", field.Value)
+                    }
+                }
+                values[field.Key] = &strSliceValue
+            case "confirm":
+                var boolValue bool
+                if field.Value != nil {
+                    if val, ok := field.Value.(bool); ok {
+                        boolValue = val
+                    } else {
+                        fmt.Printf("Warning: Unexpected type for confirm default value: %T\n", field.Value)
+                    }
+                }
+                values[field.Key] = &boolValue
+            case "note":
+                values[field.Key] = nil
+            default:
+                return nil, nil, fmt.Errorf("unsupported field type for value initialization: %s", field.Type)
+            }
+
+            // Create the huh field from our DSL field
+            var huhField huh.Field
+            switch field.Type {
+            case "input":
+                input := huh.NewInput().
+                    Title(field.Title).
+                    Value(values[field.Key].(*string))
+                if field.InputAttributes != nil {
+                    if field.InputAttributes.Prompt != "" {
+                        input = input.Prompt(field.InputAttributes.Prompt)
+                    }
+                    if field.InputAttributes.CharLimit > 0 {
+                        input = input.CharLimit(field.InputAttributes.CharLimit)
+                    }
+                    if field.InputAttributes.Placeholder != "" {
+                        input = input.Placeholder(field.InputAttributes.Placeholder)
+                    }
+                    if field.InputAttributes.EchoMode != "" {
+                        switch field.InputAttributes.EchoMode {
+                        case "password":
+                            input = input.EchoMode(huh.EchoModePassword)
+                        case "none":
+                            input = input.EchoMode(huh.EchoModeNone)
+                        }
+                    }
+                }
+                huhField = input
+
+            case "text":
+                text := huh.NewText().
+                    Title(field.Title).
+                    Value(values[field.Key].(*string))
+                if field.TextAttributes != nil {
+                    if field.TextAttributes.Lines > 0 {
+                        text = text.Lines(field.TextAttributes.Lines)
+                    }
+                    if field.TextAttributes.CharLimit > 0 {
+                        text = text.CharLimit(field.TextAttributes.CharLimit)
+                    }
+                    text = text.ShowLineNumbers(field.TextAttributes.ShowLineNumbers)
+                    if field.TextAttributes.Placeholder != "" {
+                        text = text.Placeholder(field.TextAttributes.Placeholder)
+                    }
+                    if field.TextAttributes.Editor != "" {
+                        text = text.Editor(field.TextAttributes.Editor)
+                    }
+                    if len(field.TextAttributes.EditorArgs) > 0 {
+                        text = text.EditorExtension(strings.Join(field.TextAttributes.EditorArgs, " "))
+                    }
+                    if field.TextAttributes.EditorExtension != "" {
+                        text = text.EditorExtension(field.TextAttributes.EditorExtension)
+                    }
+                }
+                huhField = text
+
+            case "select":
+                select_ := huh.NewSelect[string]().
+                    Title(field.Title).
+                    Options(createOptions(field.Options)...).
+                    Value(values[field.Key].(*string))
+                if field.SelectAttributes != nil {
+                    select_ = select_.Inline(field.SelectAttributes.Inline)
+                    if field.SelectAttributes.Height > 0 {
+                        select_ = select_.Height(field.SelectAttributes.Height)
+                    }
+                    select_ = select_.Filtering(field.SelectAttributes.Filterable)
+                }
+                huhField = select_
+
+            case "multiselect":
+                multiSelect := huh.NewMultiSelect[string]().
+                    Title(field.Title).
+                    Options(createOptions(field.Options)...).
+                    Value(values[field.Key].(*[]string))
+                if field.MultiSelectAttributes != nil {
+                    if field.MultiSelectAttributes.Limit > 0 {
+                        multiSelect = multiSelect.Limit(field.MultiSelectAttributes.Limit)
+                    }
+                    if field.MultiSelectAttributes.Height > 0 {
+                        multiSelect = multiSelect.Height(field.MultiSelectAttributes.Height)
+                    }
+                    multiSelect = multiSelect.Filterable(field.MultiSelectAttributes.Filterable)
+                }
+                huhField = multiSelect
+
+            case "confirm":
+                confirm := huh.NewConfirm().
+                    Title(field.Title).
+                    Value(values[field.Key].(*bool))
+                if field.ConfirmAttributes != nil {
+                    if field.ConfirmAttributes.Affirmative != "" {
+                        confirm = confirm.Affirmative(field.ConfirmAttributes.Affirmative)
+                    }
+                    if field.ConfirmAttributes.Negative != "" {
+                        confirm = confirm.Negative(field.ConfirmAttributes.Negative)
+                    }
+                }
+                huhField = confirm
+
+            case "note":
+                note := huh.NewNote().
+                    Title(field.Title).
+                    Description(field.Description)
+                if field.NoteAttributes != nil {
+                    if field.NoteAttributes.Height > 0 {
+                        note = note.Height(field.NoteAttributes.Height)
+                    }
+                    if field.NoteAttributes.ShowNextButton {
+                        note = note.Next(true)
+                        if field.NoteAttributes.NextLabel != "" {
+                            note = note.NextLabel(field.NoteAttributes.NextLabel)
+                        }
+                    }
+                }
+                huhField = note
+
+            case "filepicker":
+                filePicker := huh.NewFilePicker().
+                    Title(field.Title).
+                    Value(values[field.Key].(*string))
+                if field.FilePickerAttributes != nil {
+                    if field.FilePickerAttributes.CurrentDirectory != "" {
+                        filePicker = filePicker.CurrentDirectory(field.FilePickerAttributes.CurrentDirectory)
+                    }
+                    filePicker = filePicker.
+                        ShowHidden(field.FilePickerAttributes.ShowHidden).
+                        ShowSize(field.FilePickerAttributes.ShowSize).
+                        ShowPermissions(field.FilePickerAttributes.ShowPermissions).
+                        FileAllowed(field.FilePickerAttributes.FileAllowed).
+                        DirAllowed(field.FilePickerAttributes.DirAllowed)
+                    if len(field.FilePickerAttributes.AllowedTypes) > 0 {
+                        filePicker = filePicker.AllowedTypes(field.FilePickerAttributes.AllowedTypes)
+                    }
+                    if field.FilePickerAttributes.Height > 0 {
+                        filePicker = filePicker.Height(field.FilePickerAttributes.Height)
+                    }
+                }
+                huhField = filePicker
+
+            default:
+                return nil, nil, fmt.Errorf("unsupported field type during huh field creation: %s", field.Type)
+            }
+
+            if len(field.Validation) > 0 {
+                var err error
+                huhField, err = addValidation(huhField, field.Validation)
+                if err != nil {
+                    fmt.Printf("Warning: Validation not yet implemented for field %s\n", field.Key)
+                }
+            }
+
+            huhFields = append(huhFields, huhField)
+        }
+
+        if len(huhFields) == 0 {
+            continue
+        }
+
+        huhGroup := huh.NewGroup(huhFields...)
+        huhGroups = append(huhGroups, huhGroup)
+    }
+
+    if len(huhGroups) == 0 {
+        // Return an empty form to keep the contract simple.
+        empty := huh.NewForm()
+        return empty, values, nil
+    }
+
+    huhForm := huh.NewForm(huhGroups...)
+    if f.Theme != "" {
+        theme, err := getTheme(f.Theme)
+        if err != nil {
+            return nil, nil, err
+        }
+        huhForm = huhForm.WithTheme(theme)
+    }
+
+    return huhForm, values, nil
+}
+
+// ExtractFinalValues converts the internal values map (which stores pointers)
+// into a plain map. Call this after the returned huh.Form has reached
+// huh.StateCompleted inside your Bubble Tea program.
+func ExtractFinalValues(values map[string]interface{}) (map[string]interface{}, error) {
+    finalValues := make(map[string]interface{})
+    for key, valuePtr := range values {
+        if valuePtr == nil {
+            continue
+        }
+        switch p := valuePtr.(type) {
+        case *string:
+            finalValues[key] = *p
+        case *[]string:
+            if *p == nil {
+                finalValues[key] = []string{}
+            } else {
+                finalValues[key] = *p
+            }
+        case *bool:
+            finalValues[key] = *p
+        default:
+            return nil, fmt.Errorf("unexpected pointer type in results map for key '%s': %T", key, p)
+        }
+    }
+    return finalValues, nil
+}
+
+// BuildBubbleTeaModelFromYAML unmarshals a Uhoh Form from YAML bytes and
+// returns a huh.Form (tea.Model) + the internal values map. This lets callers
+// embed Uhoh forms into larger Bubble Tea apps.
+func BuildBubbleTeaModelFromYAML(src []byte) (*huh.Form, map[string]interface{}, error) {
+    var f Form
+    if err := yaml.Unmarshal(src, &f); err != nil {
+        return nil, nil, err
+    }
+    return f.BuildBubbleTeaModel()
 }
 
 // Run executes the form and returns a map of the input values and an error if any
