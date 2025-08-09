@@ -294,7 +294,6 @@ func main() {
 	err = clay.InitViper("uhoh", rootCmd)
 	cobra.CheckErr(err)
 
-	helpSystem.SetupCobraRootCommand(rootCmd)
 
 	rootCmd.AddCommand(runCommandCmd)
 	rootCmd.AddCommand(ExampleCommand())
