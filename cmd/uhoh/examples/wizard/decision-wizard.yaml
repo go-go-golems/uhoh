@@ -1,0 +1,101 @@
+name: Decision Wizard
+description: A wizard demonstrating decision steps and conditional branching.
+theme: Default
+
+steps:
+  - id: intro
+    type: info
+    title: Welcome
+    content: |
+      Welcome to our product recommendation wizard!
+      Please answer a few questions to help us suggest the right product for you.
+
+  - id: user-category
+    type: decision
+    title: User Category
+    description: Which category best describes you?
+    target_key: user_type
+    choices:
+      - Developer
+      - Designer
+      - Manager
+    next_step_map:
+      Developer: developer-questions
+      Designer: designer-questions
+      Manager: manager-questions
+
+  - id: developer-questions
+    type: form
+    title: Developer Questions
+    description: Tell us about your development preferences.
+    form:
+      groups:
+        - fields:
+            - key: programming_language
+              type: select
+              title: Primary Programming Language
+              options:
+                - label: Python
+                  value: python
+                - label: JavaScript
+                  value: javascript
+                - label: Go
+                  value: go
+                - label: Other
+                  value: other
+    next_step: final-recommendation
+
+  - id: designer-questions
+    type: form
+    title: Designer Questions
+    description: Tell us about your design preferences.
+    form:
+      groups:
+        - fields:
+            - key: design_tool
+              type: select
+              title: Primary Design Tool
+              options:
+                - label: Figma
+                  value: figma
+                - label: Adobe XD
+                  value: xd
+                - label: Sketch
+                  value: sketch
+                - label: Other
+                  value: other
+    next_step: final-recommendation
+
+  - id: manager-questions
+    type: form
+    title: Manager Questions
+    description: Tell us about your management preferences.
+    form:
+      groups:
+        - fields:
+            - key: team_size
+              type: select
+              title: Team Size
+              options:
+                - label: Small (1-5)
+                  value: small
+                - label: Medium (6-20)
+                  value: medium
+                - label: Large (21+)
+                  value: large
+    next_step: final-recommendation
+
+  - id: final-recommendation
+    type: summary
+    title: Your Recommendation
+    description: Based on your answers, here's what we recommend.
+    template: |
+      User Type: {{user_type}}
+
+      {% if user_type == "Developer" %}
+      We recommend our IDE Pro solution for {{programming_language}} developers.
+      {% elif user_type == "Designer" %}
+      We recommend our Design Suite that integrates well with {{design_tool}}.
+      {% elif user_type == "Manager" %}
+      We recommend our Team Management Platform, optimized for {{team_size}} teams.
+      {% endif %}

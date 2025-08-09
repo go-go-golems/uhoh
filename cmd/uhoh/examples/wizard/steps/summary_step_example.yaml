@@ -1,0 +1,99 @@
+name: Summary Step Example
+description: This wizard demonstrates the usage of summary steps to review collected information
+theme: Charm
+global_state:
+  example_data: "pre-populated value"
+steps:
+  - id: introduction
+    type: info
+    title: Summary Step Demo
+    content: |
+      This wizard demonstrates how summary steps work.
+
+      Summary steps display the data collected during the wizard,
+      allowing users to review information before finalizing their choices.
+
+      Click Next to start collecting some sample data that we'll
+      summarize at the end.
+
+  - id: personal_info
+    type: form
+    title: Personal Information
+    form:
+      groups:
+        - name: Basic Information
+          fields:
+            - type: input
+              key: full_name
+              title: Full Name
+              validation:
+                - condition: "len(value) < 3"
+                  error: Please enter your full name
+            - type: input
+              key: email
+              title: Email Address
+              validation:
+                - condition: "strings.Contains(value, '@') == false"
+                  error: Please enter a valid email address
+            - type: input
+              key: phone
+              title: Phone Number (optional)
+
+  - id: preferences
+    type: form
+    title: Preferences
+    form:
+      groups:
+        - name: Options
+          fields:
+            - type: select
+              key: theme
+              title: Preferred Theme
+              options:
+                - label: "Light"
+                  value: "light"
+                - label: "Dark"
+                  value: "dark"
+                - label: "System Default"
+                  value: "system"
+            - type: checkbox
+              key: notifications
+              title: Enable Notifications
+              value: true
+            - type: checkbox
+              key: marketing_emails
+              title: Receive Marketing Emails
+              value: false
+
+  - id: review
+    type: summary
+    title: Review Your Information
+    description: Please review the information you've provided
+    sections:
+      - title: Personal Information
+        fields:
+          - full_name
+          - email
+          - phone
+      - title: Preferences
+        fields:
+          - theme
+          - notifications
+          - marketing_emails
+      - title: System Information
+        fields:
+          - example_data
+
+  - id: completion
+    type: info
+    title: Wizard Complete
+    content: |
+      Thank you for exploring the Summary Step Demo!
+
+      In a real application, after reviewing the summary,
+      the wizard might save the data to a database, create a 
+      user account, or perform other finalization actions.
+
+      The summary step is an important part of providing a 
+      good user experience by letting users verify their 
+      information before it's processed.

@@ -1,11 +1,10 @@
 module github.com/go-go-golems/uhoh
 
-go 1.23
-
-toolchain go1.23.7
+go 1.24.2
 
 require (
 	github.com/charmbracelet/huh v0.6.0
+	github.com/expr-lang/expr v1.17.2
 	github.com/go-go-golems/clay v0.1.34
 	github.com/go-go-golems/glazed v0.5.39
 	github.com/pkg/errors v0.9.1

@@ -1,0 +1,29 @@
+name: Simple Contact Wizard
+description: A basic wizard to collect contact information.
+theme: Default # Optional theme
+steps:
+  - id: contact_info
+    type: form # Specifies this is a form step
+    title: Enter Contact Details
+    form:
+      groups:
+        - name: Contact Information
+          fields:
+            - type: input
+              key: name
+              title: Your Name
+              # Not implemented yet
+              # validation:
+              #   - condition: "len(value) < 2"
+              #     error: Name must be at least 2 characters
+            - type: input
+              key: email
+              title: Email Address
+              # Not implemented yet
+              # validation:
+              #   - condition: "!strings.Contains(value, '@')"
+              #     error: Please enter a valid email address
+            - type: confirm
+              key: subscribe
+              title: Subscribe to newsletter?
+              value: true

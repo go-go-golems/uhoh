@@ -1,0 +1,33 @@
+name: Simple Multi-Step Demo
+description: Demonstrates a basic linear wizard flow.
+theme: default
+
+steps:
+  - id: intro
+    type: info
+    title: Welcome!
+    content: |
+      This wizard will ask you a couple of questions.
+      Let's get started!
+
+  - id: user-details
+    type: form
+    title: Your Details
+    description: Please provide your name and email.
+    form:
+      fields:
+        - name: name
+          label: Name
+          type: text
+          required: true
+        - name: email
+          label: Email
+          type: email
+          required: true
+
+  - id: thank-you
+    type: info
+    title: Thank You
+    content: |
+      Thanks for providing your details!
+      The wizard is now complete.

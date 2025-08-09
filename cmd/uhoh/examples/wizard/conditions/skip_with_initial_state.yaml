@@ -1,0 +1,23 @@
+name: Skip Condition with Initial State
+description: Demonstrates skipping a step based on externally provided initial state.
+
+# Run this example like:
+# ./uhoh run-wizard examples/wizard/conditions/skip_with_initial_state.yaml --initial-state '{"user_role": "admin"}'
+# Or try without --initial-state or with '{"user_role": "guest"}' to see the step execute.
+
+steps:
+  - id: welcome
+    type: info
+    title: Welcome!
+    content: "This wizard shows conditional steps."
+
+  - id: admin_only_step
+    type: info
+    title: Administrator Area
+    content: "This content is only visible to administrators."
+    skip_condition: 'user_role != "admin"' # Skip if user_role is not admin
+
+  - id: final_step
+    type: info
+    title: Wizard Complete
+    content: "The wizard has finished." 

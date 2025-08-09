@@ -1,0 +1,89 @@
+name: Callback Demo Wizard
+description: A wizard demonstrating action steps and callback functions.
+theme: Default
+
+# Note: Callbacks need to be registered programmatically before running this wizard
+# See comments below for expected callback implementations
+
+steps:
+  - id: user-info
+    type: form
+    title: User Information
+    description: Please enter your GitHub username to fetch your repositories.
+    form:
+      groups:
+        - fields:
+            - key: github_username
+              type: input
+              title: GitHub Username
+              value: ""
+    after: validateGithubUsername # Callback to validate the username
+
+  - id: fetch-repos
+    type: action
+    title: Fetching Repositories
+    description: Retrieving your GitHub repositories...
+    action_type: function
+    function_name: fetchGithubRepos
+    arguments:
+      username: "{{github_username}}"
+    output_key: repositories
+    # This action would call a registered callback function that uses the GitHub API
+    # to fetch repositories for the provided username.
+
+  - id: select-repo
+    type: form
+    title: Select Repository
+    description: Choose a repository to view details.
+    form:
+      groups:
+        - fields:
+            - key: selected_repo
+              type: select
+              title: Repository
+              # This would be populated dynamically from the 'repositories' in the state
+              # Using the validation callback to populate options at runtime
+
+  - id: repo-details
+    type: action
+    title: Fetching Repository Details
+    description: Getting details for the selected repository...
+    action_type: function
+    function_name: fetchRepoDetails
+    arguments:
+      username: "{{github_username}}"
+      repository: "{{selected_repo}}"
+    output_key: repo_details
+    # This action would fetch detailed information about the selected repository
+
+  - id: display-details
+    type: summary
+    title: Repository Details
+    description: Here are the details for the selected repository.
+    template: |
+      Repository: {{selected_repo}}
+
+      Owner: {{github_username}}
+      Stars: {{repo_details.stars}}
+      Forks: {{repo_details.forks}}
+      Language: {{repo_details.language}}
+
+      Last Updated: {{repo_details.updated_at}}
+
+# Notes on expected callbacks:
+#
+# 1. validateGithubUsername:
+#    - Checks if the provided GitHub username exists
+#    - Returns an error if invalid
+#
+# 2. fetchGithubRepos:
+#    - Takes a GitHub username
+#    - Returns a list of repository objects
+#
+# 3. Before select-repo step execution:
+#    - A callback would dynamically populate the options for the select field
+#    - based on the repositories fetched in the previous step
+#
+# 4. fetchRepoDetails:
+#    - Takes a GitHub username and repository name
+#    - Returns detailed information about the repository
