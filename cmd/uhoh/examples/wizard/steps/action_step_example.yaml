@@ -32,16 +32,10 @@ steps:
               key: username
               title: Username
               placeholder: Enter your username
-              validation:
-                - condition: "len(value) < 3"
-                  error: Username must be at least 3 characters
             - type: input
               key: email
               title: Email Address
               placeholder: Enter your email
-              validation:
-                - condition: "strings.Contains(value, '@') == false"
-                  error: Please enter a valid email address
 
   - id: process_info
     type: action

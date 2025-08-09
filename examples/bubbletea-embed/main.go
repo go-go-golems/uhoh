@@ -94,7 +94,7 @@ func NewParentModel() (parentModel, error) {
 }
 
 func (m parentModel) Init() tea.Cmd {
-	rand.Seed(time.Now().UnixNano())
+
 	return tea.Batch(
 		m.form.Init(),
 		m.info.Init(),

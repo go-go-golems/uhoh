@@ -10,6 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const summaryFieldNotSetPlaceholder = "(not set)"
+
 // SummarySection defines a section in the summary
 type SummarySection struct {
 	Title  string   `yaml:"title"`
@@ -57,7 +59,7 @@ func (ss *SummaryStep) Execute(ctx context.Context, state map[string]interface{}
 			for _, field := range section.Fields {
 				value, exists := state[field]
 				if !exists {
-					sb.WriteString(fmt.Sprintf("- **%s**: (not set)\n", field))
+					sb.WriteString(fmt.Sprintf("- **%s**: %s\n", field, summaryFieldNotSetPlaceholder))
 					continue
 				}
 				sb.WriteString(fmt.Sprintf("- **%s**: %v\n", field, value))

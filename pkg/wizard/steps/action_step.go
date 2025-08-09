@@ -86,8 +86,12 @@ func (as *ActionStep) Execute(ctx context.Context, state map[string]interface{})
 		// Simulate some work
 		time.Sleep(2 * time.Second)
 
-		// Set a placeholder result
-		actionResult = fmt.Sprintf("Simulated result from %s (no registry available)", as.FunctionName)
+		// Set a structured placeholder result
+		actionResult = map[string]interface{}{
+			"simulated": true,
+			"function":  as.FunctionName,
+			"message":   fmt.Sprintf("Simulated result from %s (no registry available)", as.FunctionName),
+		}
 		log.Warn().Str("stepId", as.ID()).Msg("Using simulated action result - no callback registry provided")
 	}
 

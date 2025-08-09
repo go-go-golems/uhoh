@@ -3,6 +3,7 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/charmbracelet/huh"
@@ -428,7 +429,7 @@ func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 					} else {
 						// Handle other unexpected types for multiselect default
 						// For now, initialize empty or log warning
-						fmt.Printf("Warning: Unexpected type for multiselect default value: %T\n", field.Value)
+						log.Printf("Warning: Unexpected type for multiselect default value: %T", field.Value)
 					}
 				}
 				values[field.Key] = &strSliceValue // Store pointer
@@ -440,7 +441,7 @@ func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 					} else {
 						// Handle non-bool default value for confirm field - maybe parse string?
 						// For now, default to false if type is wrong
-						fmt.Printf("Warning: Unexpected type for confirm default value: %T\n", field.Value)
+						log.Printf("Warning: Unexpected type for confirm default value: %T", field.Value)
 					}
 				}
 				values[field.Key] = &boolValue // Store pointer
@@ -623,7 +624,7 @@ func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 				if err != nil {
 					// validation is not implemented yet
 					// return nil, fmt.Errorf("validation error for field %s: %w", field.Key, err)
-					fmt.Printf("Warning: Validation not yet implemented for field %s\n", field.Key)
+					log.Printf("Warning: Validation not yet implemented for field %s", field.Key)
 				}
 			}
 
@@ -633,7 +634,7 @@ func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 		if len(huhFields) == 0 {
 			// Allow groups with no fields (e.g., for layout purposes if huh supports it?)
 			// Or return error? Let's allow it for now.
-			// fmt.Printf("Warning: Group '%s' has no fields.\n", group.Name)
+			// log.Printf("Warning: Group '%s' has no fields.", group.Name)
 			continue // Skip creating an empty huh.Group
 		}
 
@@ -645,7 +646,7 @@ func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 
 	// Check if there are any groups to run
 	if len(huhGroups) == 0 {
-		fmt.Println("Warning: No interactive fields found in the form.")
+		log.Println("Warning: No interactive fields found in the form.")
 		return make(map[string]interface{}), nil // Return empty results if no groups/fields
 	}
 
@@ -662,20 +663,20 @@ func (f *Form) Run(ctx context.Context) (map[string]interface{}, error) {
 		huhForm = huhForm.WithTheme(theme)
 	}
 
-	fmt.Println("--- Running Form ---") // Debug statement
+	log.Println("--- Running Form ---") // Debug statement
 	// Run the form
 	err := huhForm.RunWithContext(ctx)
 	if err != nil {
 		// Check for specific errors like Abort
 		if errors.Is(err, huh.ErrUserAborted) {
-			fmt.Println("Form aborted by user.")
+			log.Println("Form aborted by user.")
 			// Return a specific error or nil with partial results?
 			// For now, return the error.
 			return nil, errors.Wrap(err, "form aborted")
 		}
 		return nil, errors.Wrap(err, "error running huh form")
 	}
-	fmt.Println("--- Form Finished ---") // Debug statement
+	log.Println("--- Form Finished ---") // Debug statement
 
 	// Extract final values from the pointers in the map
 	finalValues := make(map[string]interface{})
