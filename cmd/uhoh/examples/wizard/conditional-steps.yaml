@@ -1,0 +1,100 @@
+name: Conditional Steps Wizard
+description: A wizard demonstrating conditional steps based on state values.
+theme: Default
+
+global_state:
+  is_advanced_user: false
+
+steps:
+  - id: user-level
+    type: form
+    title: User Experience Level
+    description: Please tell us your experience level.
+    form:
+      groups:
+        - fields:
+            - key: is_advanced_user
+              type: confirm
+              title: Are you an advanced user?
+              value: false
+
+  - id: basic-setup
+    type: form
+    title: Basic Setup
+    description: Simple configuration for most users.
+    skip_condition: "is_advanced_user == true" # Skip if user is advanced
+    form:
+      groups:
+        - fields:
+            - key: theme
+              type: select
+              title: Choose a Theme
+              options:
+                - label: Light
+                  value: light
+                - label: Dark
+                  value: dark
+            - key: notifications
+              type: confirm
+              title: Enable Notifications
+              value: true
+
+  - id: advanced-setup
+    type: form
+    title: Advanced Setup
+    description: Detailed configuration for advanced users.
+    skip_condition: "is_advanced_user == false" # Skip if user is not advanced
+    form:
+      groups:
+        - name: Display Settings
+          fields:
+            - key: theme
+              type: select
+              title: Choose a Theme
+              options:
+                - label: Light
+                  value: light
+                - label: Dark
+                  value: dark
+                - label: High Contrast
+                  value: high-contrast
+                - label: Custom
+                  value: custom
+            - key: custom_theme_file
+              type: filepicker
+              title: Custom Theme File
+              visible_condition: "theme == 'custom'" # Show only if custom theme is selected
+        - name: Notification Settings
+          fields:
+            - key: notifications
+              type: confirm
+              title: Enable Notifications
+              value: true
+            - key: notification_frequency
+              type: select
+              title: Notification Frequency
+              options:
+                - label: Real-time
+                  value: realtime
+                - label: Hourly
+                  value: hourly
+                - label: Daily
+                  value: daily
+              visible_condition: "notifications == true" # Show only if notifications are enabled
+
+  - id: summary
+    type: summary
+    title: Setup Summary
+    description: Here's a summary of your configuration.
+    template: |
+      Experience Level: {{if is_advanced_user}}Advanced{{else}}Basic{{end}}
+
+      Selected Theme: {{theme}}
+      {{if theme == "custom"}}
+      Custom Theme File: {{custom_theme_file}}
+      {{end}}
+
+      Notifications: {{if notifications}}Enabled{{else}}Disabled{{end}}
+      {{if notifications && is_advanced_user}}
+      Notification Frequency: {{notification_frequency}}
+      {{end}}

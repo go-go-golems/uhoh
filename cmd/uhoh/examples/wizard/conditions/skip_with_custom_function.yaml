@@ -1,0 +1,34 @@
+name: Skip Condition with Custom Function
+description: Demonstrates skipping a step based on a custom function.
+
+# This example requires the 'isWeekend' function to be registered
+# when running the wizard command.
+# (Implementation of how to register functions via CLI is TBD)
+
+global_state:
+  today: "Monday" # Example state value
+
+steps:
+  - id: intro
+    type: info
+    title: Custom Function Check
+    content: "Let's see if it's the weekend..."
+
+  - id: weekday_info
+    type: info
+    title: Weekday Task
+    content: "It's a weekday. Time to work!"
+    # Assume isWeekend() is a custom registered function that returns true/false
+    skip_condition: "isWeekend(today)" # Skip this if it IS the weekend
+
+  - id: weekend_info
+    type: info
+    title: Weekend Vibes
+    content: "Yay! It's the weekend!"
+    # Skip this if it's NOT the weekend
+    skip_condition: "!isWeekend(today)"
+
+  - id: end
+    type: info
+    title: Done
+    content: "Finished checking the day."

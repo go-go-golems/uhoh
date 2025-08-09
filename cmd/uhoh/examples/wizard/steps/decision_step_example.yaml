@@ -1,0 +1,95 @@
+name: Decision Step Example
+description: This wizard demonstrates the usage of decision steps for branching flows
+theme: Dracula
+steps:
+  - id: introduction
+    type: info
+    title: Decision Step Demo
+    content: |
+      This wizard demonstrates how decision steps work.
+
+      Decision steps allow users to choose between different options,
+      and the wizard can branch to different paths based on these choices.
+
+      Click Next to start making decisions.
+
+  - id: choose_pet
+    type: decision
+    title: Choose a Pet
+    description: What kind of pet would you prefer?
+    target_key: pet_choice
+    choices:
+      - "Dog"
+      - "Cat"
+      - "Fish"
+      - "Bird"
+    next_step_map:
+      "Dog": dog_info
+      "Cat": cat_info
+      "Fish": fish_info
+      "Bird": bird_info
+
+  - id: dog_info
+    type: info
+    title: Dogs
+    content: |
+      Dogs make loyal and loving companions. They require regular
+      exercise and training, but provide companionship and protection.
+
+      Some popular breeds include:
+      - Labrador Retriever
+      - German Shepherd
+      - Golden Retriever
+      - Beagle
+    next_step: summary
+
+  - id: cat_info
+    type: info
+    title: Cats
+    content: |
+      Cats are independent and low-maintenance pets. They're perfect
+      for people with busy lifestyles who still want a furry companion.
+
+      Some popular breeds include:
+      - Maine Coon
+      - Siamese
+      - Persian
+      - Ragdoll
+    next_step: summary
+
+  - id: fish_info
+    type: info
+    title: Fish
+    content: |
+      Fish are fascinating and peaceful pets. They require minimal space
+      and can be very calming to watch.
+
+      Some popular types include:
+      - Betta Fish
+      - Goldfish
+      - Guppies
+      - Tetras
+    next_step: summary
+
+  - id: bird_info
+    type: info
+    title: Birds
+    content: |
+      Birds are intelligent and social pets. They can form strong bonds
+      with their owners and many species can learn to talk or sing.
+
+      Some popular types include:
+      - Budgerigars (Budgies)
+      - Cockatiels
+      - Canaries
+      - Finches
+    next_step: summary
+
+  - id: summary
+    type: info
+    title: Thank You
+    content: |
+      Thank you for exploring the Decision Step Demo!
+
+      This wizard has demonstrated how to use decision steps to create
+      branching paths in your wizards.

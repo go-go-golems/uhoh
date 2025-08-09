@@ -1,0 +1,271 @@
+name: Project Setup Wizard
+description: A comprehensive wizard for setting up a new project, demonstrating all step types
+theme: Dracula
+global_state:
+  created_date: "2024-08-08"
+  wizard_version: "1.0"
+steps:
+  - id: welcome
+    type: info
+    title: Welcome to the Project Setup Wizard
+    description: This wizard will guide you through creating a new project
+    content: |
+      # Project Setup Wizard
+
+      This wizard will help you:
+
+      * Choose your project type
+      * Configure basic settings
+      * Set up development options
+      * Initialize your project
+
+      This example demonstrates all step types (info, decision, form, action, summary)
+      working together in a cohesive flow.
+
+      Click **Next** to begin.
+
+  - id: project_type
+    type: decision
+    title: Select Project Type
+    description: What kind of project do you want to create?
+    target_key: project_type
+    choices:
+      - "Web Application"
+      - "Mobile App"
+      - "Desktop Application"
+      - "Library/Framework"
+    next_step_map:
+      "Web Application": web_config
+      "Mobile App": mobile_config
+      "Desktop Application": desktop_config
+      "Library/Framework": library_config
+
+  - id: web_config
+    type: form
+    title: Web Application Configuration
+    form:
+      groups:
+        - name: Frontend
+          fields:
+            - type: select
+              key: frontend_framework
+              title: Frontend Framework
+              options:
+                - label: "React"
+                  value: "react"
+                - label: "Vue"
+                  value: "vue"
+                - label: "Angular"
+                  value: "angular"
+                - label: "Svelte"
+                  value: "svelte"
+            - type: checkbox
+              key: use_typescript
+              title: Use TypeScript
+              value: true
+        - name: Backend
+          fields:
+            - type: select
+              key: backend_framework
+              title: Backend Framework
+              options:
+                - label: "Node.js/Express"
+                  value: "express"
+                - label: "Python/Django"
+                  value: "django"
+                - label: "Ruby on Rails"
+                  value: "rails"
+                - label: "Go"
+                  value: "go"
+    next_step: advanced_options
+
+  - id: mobile_config
+    type: form
+    title: Mobile App Configuration
+    form:
+      groups:
+        - name: Platform
+          fields:
+            - type: select
+              key: mobile_platform
+              title: Target Platform
+              options:
+                - label: "iOS"
+                  value: "ios"
+                - label: "Android"
+                  value: "android"
+                - label: "Cross-platform"
+                  value: "cross"
+            - type: select
+              key: mobile_framework
+              title: Framework
+              options:
+                - label: "Native"
+                  value: "native"
+                - label: "React Native"
+                  value: "react-native"
+                - label: "Flutter"
+                  value: "flutter"
+                - label: "Xamarin"
+                  value: "xamarin"
+    next_step: advanced_options
+
+  - id: desktop_config
+    type: form
+    title: Desktop Application Configuration
+    form:
+      groups:
+        - name: Platform
+          fields:
+            - type: select
+              key: desktop_platform
+              title: Target Platform
+              options:
+                - label: "Windows"
+                  value: "windows"
+                - label: "macOS"
+                  value: "macos"
+                - label: "Linux"
+                  value: "linux"
+                - label: "Cross-platform"
+                  value: "cross"
+            - type: select
+              key: desktop_framework
+              title: Framework
+              options:
+                - label: "Electron"
+                  value: "electron"
+                - label: "Qt"
+                  value: "qt"
+                - label: ".NET"
+                  value: "dotnet"
+                - label: "Java/JavaFX"
+                  value: "java"
+    next_step: advanced_options
+
+  - id: library_config
+    type: form
+    title: Library/Framework Configuration
+    form:
+      groups:
+        - name: Basic Information
+          fields:
+            - type: select
+              key: library_language
+              title: Primary Language
+              options:
+                - label: "JavaScript"
+                  value: "js"
+                - label: "Python"
+                  value: "python"
+                - label: "Go"
+                  value: "go"
+                - label: "Rust"
+                  value: "rust"
+                - label: "Java"
+                  value: "java"
+            - type: checkbox
+              key: create_docs
+              title: Generate Documentation
+              value: true
+    next_step: advanced_options
+
+  - id: advanced_options
+    type: form
+    title: Advanced Options
+    form:
+      groups:
+        - name: Development Tools
+          fields:
+            - type: checkbox
+              key: use_git
+              title: Initialize Git Repository
+              value: true
+            - type: checkbox
+              key: use_ci
+              title: Setup CI/CD Pipeline
+              value: false
+            - type: checkbox
+              key: include_tests
+              title: Include Testing Framework
+              value: true
+        - name: Project Information
+          fields:
+            - type: input
+              key: project_name
+              title: Project Name
+              validation:
+                - condition: "len(value) < 3"
+                  error: Project name must be at least 3 characters
+            - type: input
+              key: project_description
+              title: Project Description
+              placeholder: A short description of your project
+
+  - id: review
+    type: summary
+    title: Project Summary
+    description: Review your project configuration before creating
+    sections:
+      - title: Project Details
+        fields:
+          - project_name
+          - project_description
+          - project_type
+      - title: Technology Stack
+        fields:
+          - frontend_framework
+          - backend_framework
+          - mobile_platform
+          - mobile_framework
+          - desktop_platform
+          - desktop_framework
+          - library_language
+      - title: Development Options
+        fields:
+          - use_typescript
+          - use_git
+          - use_ci
+          - include_tests
+          - create_docs
+      - title: System Information
+        fields:
+          - created_date
+          - wizard_version
+
+  - id: create_project
+    type: action
+    title: Creating Project
+    description: Setting up your project files and configuration
+    action_type: function
+    function_name: createProject
+    output_key: project_path
+    arguments:
+      name: "{{state.project_name}}"
+      type: "{{state.project_type}}"
+
+  - id: completion
+    type: info
+    title: Project Created Successfully
+    content: |
+      # Congratulations!
+
+      Your project has been created successfully.
+
+      ## Next Steps
+
+      1. Navigate to your project directory
+      2. Install dependencies
+      3. Start development
+
+      Thank you for using the Project Setup Wizard.
+
+      ---
+
+      This example has demonstrated how all step types can work together:
+
+      * **Info Steps**: For displaying information and instructions
+      * **Decision Steps**: For making choices that affect the flow
+      * **Form Steps**: For collecting structured data
+      * **Summary Steps**: For reviewing collected information
+      * **Action Steps**: For performing operations without user input

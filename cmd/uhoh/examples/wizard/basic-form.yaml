@@ -1,0 +1,33 @@
+name: Basic Form Wizard
+description: A simple wizard with a single form step.
+theme: Default
+
+steps:
+  - id: user-form
+    type: form
+    title: Basic Information
+    description: Please provide some basic information about yourself.
+    form:
+      groups:
+        - name: Personal Information
+          fields:
+            - key: name
+              type: input
+              title: Name
+              value: ""
+            - key: age
+              type: input
+              title: Age
+              value: ""
+            - key: occupation
+              type: select
+              title: Occupation
+              options:
+                - label: Developer
+                  value: developer
+                - label: Designer
+                  value: designer
+                - label: Manager
+                  value: manager
+                - label: Other
+                  value: other

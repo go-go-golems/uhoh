@@ -1,0 +1,55 @@
+name: Mixed Step Types Demo
+description: Demonstrates different step types (some not yet implemented).
+theme: default
+global_state:
+  project_id: project-123
+
+steps:
+  - id: start
+    type: info
+    title: Introduction
+    content: |
+      This wizard shows various step types.
+      Some steps like decision, action, and summary are not fully implemented yet
+      and will be skipped by the runner.
+
+  - id: config-form
+    type: form
+    title: Configuration
+    form:
+      fields:
+        - name: setting_a
+          label: Setting A
+          type: text
+          default: "Default Value"
+        - name: enable_feature
+          label: Enable Feature X
+          type: checkbox
+
+  - id: decision-point
+    type: decision
+    title: Choose Path
+    target_key: chosen_path
+    choices:
+      - Option A
+      - Option B
+    # next_step_map would go here
+
+  - id: perform-action
+    type: action
+    title: Backend Action
+    action_type: function # Placeholder
+    function_name: do_something # Placeholder
+    output_key: action_result # Placeholder
+
+  - id: final-summary
+    type: summary
+    title: Wizard Summary
+    # template could go here
+
+  - id: finish
+    type: info
+    title: Finished
+    content: |
+      The wizard has completed (or skipped to the end).
+      Check the final state output.

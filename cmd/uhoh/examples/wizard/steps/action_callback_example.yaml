@@ -1,0 +1,121 @@
+name: Action Callback Example
+description: This example demonstrates how to use action callbacks for backend operations
+theme: Dracula
+steps:
+  - id: introduction
+    type: info
+    title: Action Callback Demo
+    content: |
+      # Action Callback Demo
+
+      This wizard demonstrates how to use registered action callbacks.
+
+      When using this wizard with the `run-wizard` command, you would 
+      need to register the callbacks programmatically first.
+
+      ```go
+      // Example registration code:
+      wizard, err := wizard.LoadWizard("action_callback_example.yaml", 
+          wizard.WithActionCallback("fetchUserData", fetchUserDataFunc),
+          wizard.WithActionCallback("processData", processDataFunc),
+          wizard.WithActionCallback("saveResults", saveResultsFunc),
+      )
+      ```
+
+      Click Next to see the action steps in action.
+
+  - id: collect_user_id
+    type: form
+    title: Enter User ID
+    form:
+      groups:
+        - fields:
+            - type: input
+              key: user_id
+              title: User ID
+              placeholder: Enter a valid user ID
+              validation:
+                - condition: "len(value) < 3"
+                  error: User ID must be at least 3 characters
+
+  - id: fetch_user_data
+    type: action
+    title: Fetching User Data
+    description: Retrieving user profile from the database
+    action_type: function
+    function_name: fetchUserData
+    arguments:
+      user_id: "{{state.user_id}}"
+      include_profile: true
+      include_history: false
+    output_key: user_data
+
+  - id: process_data
+    type: action
+    title: Processing Data
+    description: Analyzing user activity patterns
+    action_type: function
+    function_name: processData
+    arguments:
+      data: "{{state.user_data}}"
+      algorithm: "standard"
+      detailed: true
+    output_key: analysis_results
+
+  - id: save_results
+    type: action
+    title: Saving Results
+    description: Storing analysis results to database
+    action_type: function
+    function_name: saveResults
+    arguments:
+      user_id: "{{state.user_id}}"
+      results: "{{state.analysis_results}}"
+      timestamp: true
+    output_key: operation_id
+
+  - id: summary
+    type: summary
+    title: Operation Complete
+    description: User data has been processed successfully
+    sections:
+      - title: Input Information
+        fields:
+          - user_id
+      - title: Operation Results
+        fields:
+          - user_data
+          - analysis_results
+          - operation_id
+
+  - id: completion
+    type: info
+    title: Process Complete
+    content: |
+      # Success!
+
+      Your request has been processed successfully.
+
+      In a real implementation, this example would have:
+
+      1. Fetched user data using the provided ID
+      2. Processed that data with specified parameters
+      3. Saved the results to a persistence layer
+
+      The operation was assigned ID: {{state.operation_id}}
+
+      ## Implementing Action Callbacks
+
+      To register these callbacks, you would implement functions like:
+
+      ```go
+      func fetchUserData(ctx context.Context, state map[string]interface{}, args map[string]interface{}) (interface{}, error) {
+          userID, _ := args["user_id"].(string)
+          includeProfile, _ := args["include_profile"].(bool)
+          
+          // Fetch data from database or API
+          // ...
+          
+          return userData, nil
+      }
+      ```
