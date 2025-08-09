@@ -1,0 +1,125 @@
+name: Enhanced Navigation Example
+description: This wizard demonstrates the advanced navigation features with rich decision options
+theme: Catppuccin
+steps:
+  - id: welcome
+    type: info
+    title: Enhanced Navigation Demo
+    content: |
+      # Enhanced Navigation Demo
+
+      This wizard demonstrates the advanced navigation features, including:
+
+      * Rich decision options with labels and values
+      * Direct navigation using next_step
+      * Navigation mapping with next_step_map
+      * Navigation callbacks
+
+      Click Next to see these navigation options in action.
+
+  - id: first_choice
+    type: decision
+    title: Navigation Method
+    description: How would you like to navigate?
+    target_key: navigation_method
+    options:
+      - value: "direct"
+        label: "Direct Navigation (next_step)"
+      - value: "conditional"
+        label: "Conditional Navigation (next_step_map)"
+      - value: "callback"
+        label: "Callback Navigation (skip for now)"
+    next_step_map:
+      "direct": direct_nav_example
+      "conditional": conditional_nav_example
+      "callback": callback_nav_example
+
+  - id: direct_nav_example
+    type: info
+    title: Direct Navigation
+    content: |
+      # Direct Navigation
+
+      This step demonstrates direct navigation using the `next_step` field.
+
+      When you click Next, you'll be taken directly to the "Conclusion" step,
+      skipping other steps that would normally come next in sequence.
+    next_step: conclusion
+
+  - id: conditional_nav_example
+    type: decision
+    title: Conditional Navigation
+    description: Choose your path
+    target_key: path_choice
+    options:
+      - value: "path_a"
+        label: "Path A"
+      - value: "path_b"
+        label: "Path B"
+    next_step_map:
+      "path_a": path_a
+      "path_b": path_b
+
+  - id: path_a
+    type: info
+    title: Path A
+    content: |
+      # You Chose Path A
+
+      This step was reached through conditional navigation.
+
+      From here, you'll proceed to the conclusion.
+    next_step: conclusion
+
+  - id: path_b
+    type: info
+    title: Path B
+    content: |
+      # You Chose Path B
+
+      This step was reached through conditional navigation.
+
+      From here, you'll proceed to the conclusion.
+    next_step: conclusion
+
+  - id: callback_nav_example
+    type: info
+    title: Callback Navigation
+    content: |
+      # Callback Navigation
+
+      This step would normally use a callback to dynamically determine
+      the next step based on complex logic or external data.
+
+      In a real implementation, you would register a navigation callback
+      that could evaluate the state and return the ID of the next step.
+
+      For this example, we'll proceed to the conclusion.
+    next_step: conclusion
+
+  - id: skipped_step
+    type: info
+    title: Skipped Step
+    content: |
+      # This Step Should Be Skipped
+
+      If you're seeing this step, something went wrong with the navigation.
+      All paths should bypass this step and go directly to the conclusion.
+
+  - id: conclusion
+    type: info
+    title: Navigation Complete
+    content: |
+      # Navigation Demo Complete
+
+      Congratulations! You've successfully completed the navigation demo.
+
+      This example has demonstrated:
+
+      * Rich decision options with separate values and labels
+      * Direct navigation using `next_step`
+      * Conditional navigation using `next_step_map`
+      * The concept of navigation callbacks
+
+      These navigation features allow you to create complex, branching
+      wizard flows that guide users based on their choices and data.

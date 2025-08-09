@@ -44,6 +44,8 @@ type UhohCommandDescription struct {
 	Arguments []*parameters.ParameterDefinition `yaml:"arguments,omitempty"`
 	Layers    []layers.ParameterLayer           `yaml:"layers,omitempty"`
 	Type      string                            `yaml:"type,omitempty"`
+	Tags      []string                          `yaml:"tags,omitempty"`
+	Metadata  map[string]interface{}            `yaml:"metadata,omitempty"`
 	Form      struct {
 		Name  string `yaml:"name,omitempty"`
 		Theme string `yaml:"theme,omitempty"`
@@ -113,6 +115,8 @@ func (u *UhohCommandLoader) LoadUhohCommandFromReader(
 		cmds.WithFlags(ucd.Flags...),
 		cmds.WithArguments(ucd.Arguments...),
 		cmds.WithLayersList(ucd.Layers...),
+		cmds.WithTags(ucd.Tags...),
+		cmds.WithMetadata(ucd.Metadata),
 	}
 
 	description := cmds.NewCommandDescription(
