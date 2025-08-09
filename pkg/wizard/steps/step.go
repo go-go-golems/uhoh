@@ -83,6 +83,7 @@ func (bs *BaseStep) NavigationCallback() string {
 
 // Placeholder Execute for BaseStep - concrete types should override this.
 func (bs *BaseStep) Execute(ctx context.Context, state map[string]interface{}) (map[string]interface{}, error) {
+	log.Error().Str("stepId", bs.ID()).Str("stepType", bs.Type()).Msg("Execute not implemented for step")
 	return nil, errors.Errorf("Execute not implemented for step type %s (ID: %s)", bs.Type(), bs.ID())
 }
 

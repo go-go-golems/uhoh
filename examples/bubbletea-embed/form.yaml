@@ -1,0 +1,15 @@
+name: Embedded Example Form
+theme: Default
+groups:
+  - name: Demo
+    fields:
+      - type: input
+        key: name
+        title: Your Name
+        value: Manuel
+      - type: confirm
+        key: ok
+        title: Continue?
+        value: true
+
+
