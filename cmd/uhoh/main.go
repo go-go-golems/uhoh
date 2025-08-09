@@ -69,7 +69,6 @@ func main() {
 	err = clay.InitViper("uhoh", rootCmd)
 	cobra.CheckErr(err)
 
-
 	// Instantiate and build commands from the cmds package
 	exampleCmd, err := app_cmds.NewExampleCommand()
 	cobra.CheckErr(err)
