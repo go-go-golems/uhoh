@@ -104,6 +104,30 @@ form: # Required: Form definition
         # ... fields as defined in Form DSL
 ```
 
+Note: Wizard form steps also accept a simplified schema for quick forms:
+
+```yaml
+id: user-details
+type: form
+title: Your Details
+form:
+  fields:
+    - name: name
+      label: Name
+      type: text
+    - name: email
+      label: Email
+      type: email
+```
+
+Mapping for the simplified schema:
+- `name` → form field `key`
+- `label` → form field `title`
+- `type`: `text|email|input` → `input`; `confirm|bool` → `confirm`
+- All fields are wrapped into a single implicit group
+
+For when to use which, see also: glaze help uhoh-wizards
+
 ### Decision Step
 
 A decision step presents the user with multiple paths to choose from:
