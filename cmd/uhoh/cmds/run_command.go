@@ -11,7 +11,6 @@ import (
 	"github.com/go-go-golems/uhoh/pkg/cmds"
 	"github.com/go-go-golems/uhoh/pkg/doc"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -70,14 +69,9 @@ func handleRunCommand(commandFile string, commandArgs []string) error {
 		DisableFlagParsing: true,
 	}
 
-	// Set up help for the temporary root and its command
-	helpSystem := help.NewHelpSystem()
-	err = doc.AddDocToHelpSystem(helpSystem)
-	if err != nil {
-		// Log or return error if help system setup fails
-		log.Warn().Err(err).Msg("Could not setup help system for dynamic command")
-	}
-	helpSystem.SetupCobraRootCommand(tempRootCmd)
+	// Optionally load embedded docs into a help system for future use
+	// but we don't wire a custom help command; the framework handles help.
+	_ = doc.AddDocToHelpSystem(help.NewHelpSystem())
 
 	// Build the cobra command for the loaded glazed command
 	cobraCommand, err := cli.BuildCobraCommandFromCommand(loadedCmd)
