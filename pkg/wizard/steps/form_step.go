@@ -93,9 +93,10 @@ func (fs *FormStep) UnmarshalYAML(node *yaml.Node) error {
 			fieldType = "confirm"
 		}
 		pf := &pkg.Field{
-			Type:  fieldType,
-			Key:   f.Name,
-			Title: f.Label,
+			Type:     fieldType,
+			Key:      f.Name,
+			Title:    f.Label,
+			Required: f.Required,
 		}
 		grp.Fields = append(grp.Fields, pf)
 	}

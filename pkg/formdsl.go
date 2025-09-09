@@ -27,6 +27,7 @@ type Field struct {
 	Key                   string        `yaml:"key,omitempty"`
 	Title                 string        `yaml:"title,omitempty"`
 	Description           string        `yaml:"description,omitempty"`
+	Required              bool          `yaml:"required,omitempty"`
 	Value                 interface{}   `yaml:"value,omitempty"`
 	Options               []*Option     `yaml:"options,omitempty"`
 	Validation            []*Validation `yaml:"validation,omitempty"`
