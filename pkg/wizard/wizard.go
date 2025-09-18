@@ -28,6 +28,10 @@ type WizardCallbackFunc func(ctx context.Context, state map[string]interface{}) 
 // It returns a result that can be stored in the action's output key.
 type ActionCallbackFunc func(ctx context.Context, state map[string]interface{}, args map[string]interface{}) (interface{}, error)
 
+// ActionCallbackResult can be returned by ActionCallbackFunc implementations to provide structured
+// data and indicate that UI was handled outside of the default ActionStep notes.
+type ActionCallbackResult = steps.ActionCallbackResult
+
 // Wizard defines the top-level structure for a multi-step wizard.
 type Wizard struct {
 	Name        string                 `yaml:"name"`
