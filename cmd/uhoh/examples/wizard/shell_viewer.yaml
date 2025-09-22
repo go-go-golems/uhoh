@@ -1,0 +1,22 @@
+name: shell-viewer-test
+theme: Charm
+steps:
+  - id: run_shell
+    type: action
+    title: Run Echo
+    description: Execute a short echo command
+    action_type: function
+    function_name: runShell
+    show_progress: false
+    show_completion: false
+    arguments:
+      cmd: |
+        for i in $(seq 1 40); do
+          echo "stdout line $i"
+          sleep 0.05
+        done
+        for i in $(seq 1 10); do
+          echo "stderr line $i" >&2
+          sleep 0.05
+        done
+        printf 'final stdout line\n'

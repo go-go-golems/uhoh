@@ -27,12 +27,23 @@ type ActionStep struct {
 	FunctionName string                 `yaml:"function_name,omitempty"` // For action_type: function
 	Arguments    map[string]interface{} `yaml:"arguments,omitempty"`
 	OutputKey    string                 `yaml:"output_key,omitempty"`
+	ShowProgress *bool                  `yaml:"show_progress,omitempty"`
+	ShowComplete *bool                  `yaml:"show_completion,omitempty"`
 
 	// Non-YAML fields
 	registry ActionCallbackRegistry // Registry for action callbacks
 }
 
 var _ Step = &ActionStep{}
+
+const uiHandledKey = "_uhoh_ui_handled"
+
+// ActionCallbackResult allows callbacks to return structured data and signal that they handled
+// UI updates themselves (for example, launching a Bubble Tea program).
+type ActionCallbackResult struct {
+	Data      interface{}
+	UIHandled bool
+}
 
 // SetCallbackRegistry sets the callback registry for this action step.
 func (as *ActionStep) SetCallbackRegistry(registry ActionCallbackRegistry) {
@@ -53,28 +64,36 @@ func (as *ActionStep) Execute(ctx context.Context, state map[string]interface{})
 		return nil, errors.New("function name not specified for function-type action")
 	}
 
-	// Show a note that we're executing an action
-	actionNote := huh.NewNote().
-		Title(as.Title()).
-		Description(fmt.Sprintf("Executing action: %s\n\nPlease wait...", as.FunctionName))
+	showProgress := boolValue(as.ShowProgress, true)
+	showCompletion := boolValue(as.ShowComplete, true)
 
-	// Display the note but don't wait for completion
-	go func() {
-		_ = actionNote.Run()
-	}()
+	if showProgress {
+		actionNote := huh.NewNote().
+			Title(as.Title()).
+			Description(fmt.Sprintf("Executing action: %s\n\nPlease wait...", as.FunctionName))
 
-	// Small delay to ensure note is visible
-	time.Sleep(100 * time.Millisecond)
+		go func() {
+			_ = actionNote.Run()
+		}()
 
-	var actionResult interface{}
-	var actionErr error
+		// Small delay to ensure note is visible before the callback potentially runs its own UI.
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	var (
+		actionResult interface{}
+		actionErr    error
+		uiHandled    bool
+	)
 
 	// Execute the function via the registry if available
 	if as.registry != nil {
 		log.Debug().Str("stepId", as.ID()).Str("function", as.FunctionName).
 			Interface("arguments", as.Arguments).Msg("Executing function via registry")
 
-		actionResult, actionErr = as.registry.ExecuteActionCallback(ctx, as.FunctionName, state, as.Arguments)
+		rawResult, err := as.registry.ExecuteActionCallback(ctx, as.FunctionName, state, as.Arguments)
+		actionResult, uiHandled = interpretActionResult(rawResult)
+		actionErr = err
 		if actionErr != nil {
 			return nil, errors.Wrapf(actionErr, "error executing function %s", as.FunctionName)
 		}
@@ -102,17 +121,19 @@ func (as *ActionStep) Execute(ctx context.Context, state map[string]interface{})
 			Interface("value", actionResult).Msg("Action result stored in state")
 	}
 
-	// Show a confirmation message after the action completes
-	confirmation := huh.NewNote().
-		Title("Action Complete").
-		Description(fmt.Sprintf("Action '%s' completed successfully.", as.FunctionName))
+	if showCompletion && !uiHandled {
+		// Show a confirmation message after the action completes
+		confirmation := huh.NewNote().
+			Title("Action Complete").
+			Description(fmt.Sprintf("Action '%s' completed successfully.", as.FunctionName))
 
-	err := confirmation.Run()
-	if err != nil {
-		if errors.Is(err, huh.ErrUserAborted) {
-			return nil, ErrUserAborted
+		err := confirmation.Run()
+		if err != nil {
+			if errors.Is(err, huh.ErrUserAborted) {
+				return nil, ErrUserAborted
+			}
+			return nil, errors.Wrap(err, "error showing completion message")
 		}
-		return nil, errors.Wrap(err, "error showing completion message")
 	}
 
 	return stepResult, nil
@@ -120,4 +141,41 @@ func (as *ActionStep) Execute(ctx context.Context, state map[string]interface{})
 
 func (as *ActionStep) GetBaseStep() *BaseStep {
 	return &as.BaseStep
+}
+
+func interpretActionResult(result interface{}) (interface{}, bool) {
+	if result == nil {
+		return nil, false
+	}
+
+	switch v := result.(type) {
+	case ActionCallbackResult:
+		return v.Data, v.UIHandled
+	case *ActionCallbackResult:
+		if v == nil {
+			return nil, false
+		}
+		return v.Data, v.UIHandled
+	case map[string]interface{}:
+		if handled, ok := v[uiHandledKey].(bool); ok {
+			filtered := make(map[string]interface{}, len(v))
+			for k, val := range v {
+				if k == uiHandledKey {
+					continue
+				}
+				filtered[k] = val
+			}
+			return filtered, handled
+		}
+		return v, false
+	default:
+		return result, false
+	}
+}
+
+func boolValue(v *bool, def bool) bool {
+	if v == nil {
+		return def
+	}
+	return *v
 }
