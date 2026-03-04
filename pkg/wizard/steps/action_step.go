@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -179,3 +180,63 @@ func boolValue(v *bool, def bool) bool {
 	}
 	return *v
 }
+
+// BuildModel creates a huh.Form with a Note showing progress while the
+// async callback runs. The form auto-completes (no user interaction needed)
+// because the WizardModel handles advancement on ActionCompletedMsg.
+func (as *ActionStep) BuildModel(state map[string]interface{}) (*huh.Form, map[string]interface{}, error) {
+	if as.ActionType != "function" {
+		return nil, nil, errors.Errorf("unsupported action type: %s", as.ActionType)
+	}
+	if as.FunctionName == "" {
+		return nil, nil, errors.New("function name not specified for function-type action")
+	}
+
+	description := fmt.Sprintf("Executing: %s\n\nPlease wait...", as.FunctionName)
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().
+				Title(as.Title()).
+				Description(description).
+				Next(true).
+				NextLabel(""),
+		),
+	)
+
+	return form, map[string]interface{}{}, nil
+}
+
+// RunAsync returns a tea.Cmd that executes the action callback and sends
+// ActionCompletedMsg when done.
+func (as *ActionStep) RunAsync(state map[string]interface{}) tea.Cmd {
+	return func() tea.Msg {
+		if as.registry == nil {
+			// Simulate work when no registry is available.
+			time.Sleep(500 * time.Millisecond)
+			return ActionCompletedMsg{
+				Result: map[string]interface{}{
+					"simulated": true,
+					"function":  as.FunctionName,
+					"message":   fmt.Sprintf("Simulated result from %s", as.FunctionName),
+				},
+			}
+		}
+
+		rawResult, err := as.registry.ExecuteActionCallback(
+			context.Background(), as.FunctionName, state, as.Arguments,
+		)
+		if err != nil {
+			return ActionCompletedMsg{Err: err}
+		}
+
+		result, _ := interpretActionResult(rawResult)
+		return ActionCompletedMsg{Result: result}
+	}
+}
+
+// GetOutputKey returns the state key where the action result is stored.
+func (as *ActionStep) GetOutputKey() string {
+	return as.OutputKey
+}
+
+var _ AsyncEmbeddableStep = &ActionStep{}

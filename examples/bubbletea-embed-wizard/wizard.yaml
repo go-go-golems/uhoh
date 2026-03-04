@@ -1,0 +1,44 @@
+name: Embedded Wizard Demo
+description: A multi-step wizard embedded in a Bubble Tea application.
+theme: default
+
+steps:
+  - id: welcome
+    type: info
+    title: Welcome
+    content: |
+      This wizard will collect some project information.
+      Press Enter to continue.
+
+  - id: project-details
+    type: form
+    title: Project Details
+    description: Tell us about your project.
+    form:
+      fields:
+        - name: project_name
+          label: Project Name
+          type: text
+          required: true
+        - name: description
+          label: Description
+          type: text
+
+  - id: project-type
+    type: decision
+    title: Project Type
+    target_key: project_type
+    choices:
+      - Library
+      - CLI Tool
+      - Web Service
+
+  - id: confirm
+    type: summary
+    title: Review
+    sections:
+      - title: Project
+        fields:
+          - project_name
+          - description
+          - project_type

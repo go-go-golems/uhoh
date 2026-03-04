@@ -32,6 +32,9 @@ type WizardModel struct {
 
 	// Metadata for the current step.
 	currentStep steps.EmbeddableStep
+
+	// True when waiting for an AsyncEmbeddableStep callback to complete.
+	awaitingAsync bool
 }
 
 // NewWizardModel creates a WizardModel from an existing Wizard.
@@ -51,24 +54,28 @@ func (m WizardModel) Init() tea.Cmd {
 
 // Update handles messages for the current step's form.
 func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case stepAdvanceMsg:
 		cmd := m.advanceToNextStep()
 		return m, cmd
+
+	case steps.ActionCompletedMsg:
+		return m.handleActionCompleted(msg)
 	}
 
 	if m.form == nil {
 		return m, nil
 	}
 
-	// Delegate to the inner form.
+	// When waiting for async work, still update the form (for rendering)
+	// but don't advance on form completion — wait for ActionCompletedMsg.
 	model, cmd := m.form.Update(msg)
 	if f, ok := model.(*huh.Form); ok {
 		m.form = f
 	}
 
-	// Check for form completion.
-	if m.form != nil {
+	// Check for form completion (only for non-async steps).
+	if m.form != nil && !m.awaitingAsync {
 		switch m.form.State {
 		case huh.StateNormal:
 			// Form still active, nothing to do.
@@ -140,7 +147,36 @@ func (m *WizardModel) advanceToNextStep() tea.Cmd {
 	m.form = form
 	m.values = values
 
+	// For async steps, batch form init with the async callback.
+	if asyncStep, ok := embeddable.(steps.AsyncEmbeddableStep); ok {
+		m.awaitingAsync = true
+		return tea.Batch(m.form.Init(), asyncStep.RunAsync(m.state))
+	}
+
 	return m.form.Init()
+}
+
+// handleActionCompleted processes the result of an async action step.
+func (m WizardModel) handleActionCompleted(msg steps.ActionCompletedMsg) (tea.Model, tea.Cmd) {
+	m.awaitingAsync = false
+
+	if msg.Err != nil {
+		// On error, abort the wizard.
+		return m, func() tea.Msg { return WizardAbortedMsg{} }
+	}
+
+	// Store the result under the step's output key.
+	if asyncStep, ok := m.currentStep.(steps.AsyncEmbeddableStep); ok {
+		if key := asyncStep.GetOutputKey(); key != "" && msg.Result != nil {
+			m.state[key] = msg.Result
+		}
+	}
+
+	m.form = nil
+	m.values = nil
+	m.currentStep = nil
+
+	return m, func() tea.Msg { return stepAdvanceMsg{} }
 }
 
 // handleStepCompletion extracts values from the completed step and advances.

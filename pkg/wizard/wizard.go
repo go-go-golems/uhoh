@@ -400,49 +400,43 @@ func LoadWizard(filePath string, opts ...WizardOption) (*Wizard, error) {
 		return nil, errors.Wrapf(err, "could not read wizard file %s", filePath)
 	}
 
+	return LoadWizardFromBytes(yamlData, opts...)
+}
+
+// LoadWizardFromBytes loads a Wizard definition from YAML bytes and applies options.
+func LoadWizardFromBytes(yamlData []byte, opts ...WizardOption) (*Wizard, error) {
 	var wizard Wizard
-	log.Debug().Str("filePath", filePath).Int("bytes", len(yamlData)).Msg("Attempting to unmarshal wizard YAML")
-	err = yaml.Unmarshal(yamlData, &wizard)
+	log.Debug().Int("bytes", len(yamlData)).Msg("Attempting to unmarshal wizard YAML")
+	err := yaml.Unmarshal(yamlData, &wizard)
 	if err != nil {
-		log.Error().Err(err).Str("filePath", filePath).Msg("Failed to unmarshal wizard YAML")
-		// Try to provide more context on YAML parsing errors
+		log.Error().Err(err).Msg("Failed to unmarshal wizard YAML")
 		var attempt map[string]interface{}
 		if yaml.Unmarshal(yamlData, &attempt) != nil {
-			// If even basic map unmarshal fails, it's likely a syntax error
 			return nil, errors.Wrap(err, "could not unmarshal wizard YAML (likely syntax error)")
 		}
-		// If basic map unmarshal works, the error is likely in the structure/types (caught by custom unmarshaler)
-		return nil, errors.Wrap(err, "could not unmarshal wizard YAML (check structure/types, possibly caught by custom step unmarshaler)")
+		return nil, errors.Wrap(err, "could not unmarshal wizard YAML (check structure/types)")
 	}
 
-	// Apply functional options *after* unmarshalling
 	for _, opt := range opts {
 		opt(&wizard)
 	}
 
-	// Post-unmarshal validation (mostly done by custom unmarshaller now)
 	stepIDs := make(map[string]bool)
 	for i, step := range wizard.Steps {
 		if step == nil {
-			// Should be caught by the custom unmarshaller, but defensive check
 			return nil, errors.Errorf("step %d loaded as nil, check YAML structure and UnmarshalStepYAML function", i)
 		}
 		stepID := step.ID()
 		if stepID == "" {
-			// Should be caught by the custom unmarshaller
 			return nil, errors.Errorf("step %d (type: %s) is missing required 'id' field", i, step.Type())
 		}
 		if _, exists := stepIDs[stepID]; exists {
 			return nil, errors.Errorf("duplicate step ID found: %s", stepID)
 		}
 		stepIDs[stepID] = true
-
-		// Remove the type switch validation here; it's handled by the custom unmarshaller
-		// and caused linter errors due to signature mismatches during refactoring.
-		// The custom unmarshaller provides more specific error messages if decoding fails.
 	}
 
-	log.Debug().Str("filePath", filePath).Str("wizardName", wizard.Name).Int("stepCount", len(wizard.Steps)).Msg("Wizard loaded successfully")
+	log.Debug().Str("wizardName", wizard.Name).Int("stepCount", len(wizard.Steps)).Msg("Wizard loaded successfully")
 	return &wizard, nil
 }
 
