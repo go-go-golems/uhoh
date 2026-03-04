@@ -103,3 +103,51 @@ func (ss *SummaryStep) Execute(ctx context.Context, state map[string]interface{}
 func (ss *SummaryStep) GetBaseStep() *BaseStep {
 	return &ss.BaseStep
 }
+
+// BuildModel creates a non-blocking huh.Form with a Note displaying the summary.
+func (ss *SummaryStep) BuildModel(state map[string]interface{}) (*huh.Form, map[string]interface{}, error) {
+	var sb strings.Builder
+
+	if len(ss.Sections) == 0 {
+		sb.WriteString("## Current State\n\n")
+		for k, v := range state {
+			sb.WriteString(fmt.Sprintf("- **%s**: %v\n", k, v))
+		}
+	} else {
+		for _, section := range ss.Sections {
+			sb.WriteString(fmt.Sprintf("## %s\n\n", section.Title))
+			if len(section.Fields) == 0 {
+				sb.WriteString("(No fields defined for this section)\n\n")
+				continue
+			}
+			for _, field := range section.Fields {
+				value, exists := state[field]
+				if !exists {
+					sb.WriteString(fmt.Sprintf("- **%s**: %s\n", field, summaryFieldNotSetPlaceholder))
+					continue
+				}
+				sb.WriteString(fmt.Sprintf("- **%s**: %v\n", field, value))
+			}
+			sb.WriteString("\n")
+		}
+	}
+
+	description := sb.String()
+	if ss.Description() != "" {
+		description = ss.Description() + "\n\n" + description
+	}
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().
+				Title(ss.Title()).
+				Description(description).
+				Next(true).
+				NextLabel("Continue"),
+		),
+	)
+
+	return form, map[string]interface{}{}, nil
+}
+
+var _ EmbeddableStep = &SummaryStep{}

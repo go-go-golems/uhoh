@@ -76,3 +76,35 @@ func (ds *DecisionStep) Execute(ctx context.Context, state map[string]interface{
 func (ds *DecisionStep) GetBaseStep() *BaseStep {
 	return &ds.BaseStep
 }
+
+// BuildModel creates a non-blocking huh.Form with a Select field for this decision.
+// The selected value is stored in the returned values map under the target key.
+func (ds *DecisionStep) BuildModel(state map[string]interface{}) (*huh.Form, map[string]interface{}, error) {
+	if len(ds.Choices) == 0 {
+		return nil, nil, errors.New("decision step has no choices defined")
+	}
+
+	options := make([]huh.Option[string], len(ds.Choices))
+	for i, choice := range ds.Choices {
+		options[i] = huh.NewOption(choice, choice)
+	}
+
+	var chosenValue string
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title(ds.Title()).
+				Description(ds.Description()).
+				Options(options...).
+				Value(&chosenValue),
+		),
+	)
+
+	values := map[string]interface{}{
+		ds.TargetKey: &chosenValue,
+	}
+
+	return form, values, nil
+}
+
+var _ EmbeddableStep = &DecisionStep{}

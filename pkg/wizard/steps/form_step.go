@@ -3,6 +3,7 @@ package steps
 import (
 	"context"
 
+	"github.com/charmbracelet/huh"
 	"github.com/go-go-golems/uhoh/pkg"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -47,6 +48,13 @@ func (fs *FormStep) Execute(ctx context.Context, state map[string]interface{}) (
 func (fs *FormStep) GetBaseStep() *BaseStep {
 	return &fs.BaseStep
 }
+
+// BuildModel creates a non-blocking huh.Form from this step's form data.
+func (fs *FormStep) BuildModel(state map[string]interface{}) (*huh.Form, map[string]interface{}, error) {
+	return fs.FormData.BuildBubbleTeaModel()
+}
+
+var _ EmbeddableStep = &FormStep{}
 
 // Support a simplified form schema under form.fields by mapping it to the full Form DSL.
 func (fs *FormStep) UnmarshalYAML(node *yaml.Node) error {

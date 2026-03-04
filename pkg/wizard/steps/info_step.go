@@ -49,3 +49,25 @@ func (is *InfoStep) Execute(ctx context.Context, state map[string]interface{}) (
 func (is *InfoStep) GetBaseStep() *BaseStep {
 	return &is.BaseStep
 }
+
+// BuildModel creates a non-blocking huh.Form with a Note field for this info step.
+func (is *InfoStep) BuildModel(state map[string]interface{}) (*huh.Form, map[string]interface{}, error) {
+	displayContent := is.Content
+	if is.Description() != "" {
+		displayContent = fmt.Sprintf("%s\n\n%s", is.Description(), is.Content)
+	}
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().
+				Title(is.Title()).
+				Description(displayContent).
+				Next(true).
+				NextLabel("Continue"),
+		),
+	)
+
+	return form, map[string]interface{}{}, nil
+}
+
+var _ EmbeddableStep = &InfoStep{}
