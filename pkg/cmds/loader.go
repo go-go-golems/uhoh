@@ -6,8 +6,8 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/alias"
@@ -37,15 +37,15 @@ type fieldWithRawAttributes struct {
 }
 
 type UhohCommandDescription struct {
-	Name      string                            `yaml:"name"`
-	Short     string                            `yaml:"short"`
-	Long      string                            `yaml:"long,omitempty"`
-	Flags     []*parameters.ParameterDefinition `yaml:"flags,omitempty"`
-	Arguments []*parameters.ParameterDefinition `yaml:"arguments,omitempty"`
-	Layers    []layers.ParameterLayer           `yaml:"layers,omitempty"`
-	Type      string                            `yaml:"type,omitempty"`
-	Tags      []string                          `yaml:"tags,omitempty"`
-	Metadata  map[string]interface{}            `yaml:"metadata,omitempty"`
+	Name      string                 `yaml:"name"`
+	Short     string                 `yaml:"short"`
+	Long      string                 `yaml:"long,omitempty"`
+	Flags     []*fields.Definition   `yaml:"flags,omitempty"`
+	Arguments []*fields.Definition   `yaml:"arguments,omitempty"`
+	Sections  []schema.Section       `yaml:"sections,omitempty"`
+	Type      string                 `yaml:"type,omitempty"`
+	Tags      []string               `yaml:"tags,omitempty"`
+	Metadata  map[string]interface{} `yaml:"metadata,omitempty"`
 	Form      struct {
 		Name  string `yaml:"name,omitempty"`
 		Theme string `yaml:"theme,omitempty"`
@@ -114,7 +114,7 @@ func (u *UhohCommandLoader) LoadUhohCommandFromReader(
 		cmds.WithLong(ucd.Long),
 		cmds.WithFlags(ucd.Flags...),
 		cmds.WithArguments(ucd.Arguments...),
-		cmds.WithLayersList(ucd.Layers...),
+		cmds.WithSections(ucd.Sections...),
 		cmds.WithTags(ucd.Tags...),
 		cmds.WithMetadata(ucd.Metadata),
 	}

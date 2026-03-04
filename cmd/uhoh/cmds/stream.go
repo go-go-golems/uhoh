@@ -12,8 +12,8 @@ import (
 
 	glazed_cmds "github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/alias"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/uhoh/pkg/cmds" // Use the package alias if needed
 	"github.com/pkg/errors"
 )
@@ -37,12 +37,12 @@ func NewStreamCommand() (*StreamCommand, error) {
 			"stream",
 			glazed_cmds.WithShort("Stream commands from stdin"),
 			glazed_cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"error-behavior",
-					parameters.ParameterTypeChoice,
-					parameters.WithHelp("Error behavior when processing stream"),
-					parameters.WithChoices("ignore", "debug", "exit"),
-					parameters.WithDefault("exit"),
+					fields.TypeChoice,
+					fields.WithHelp("Error behavior when processing stream"),
+					fields.WithChoices("ignore", "debug", "exit"),
+					fields.WithDefault("exit"),
 				),
 			),
 		),
@@ -52,10 +52,10 @@ func NewStreamCommand() (*StreamCommand, error) {
 // Run starts the streaming process.
 func (c *StreamCommand) Run(
 	ctx context.Context, // Note: The context passed here might not be the primary one used by the stream runner due to its nature.
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	s := &StreamSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(values.DefaultSlug, s); err != nil {
 		return errors.Wrap(err, "failed to initialize settings")
 	}
 

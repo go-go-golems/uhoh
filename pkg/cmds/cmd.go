@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	glazedcmds "github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/uhoh/pkg"
 	"gopkg.in/yaml.v2"
 )
@@ -28,7 +28,7 @@ func NewUhohCommand(
 	}, nil
 }
 
-func (u *UhohCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
+func (u *UhohCommand) Run(ctx context.Context, parsedValues *values.Values) error {
 	results, err := u.Form.Run(ctx)
 	if err != nil {
 		return err

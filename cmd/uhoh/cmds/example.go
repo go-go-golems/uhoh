@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/uhoh/pkg"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -38,11 +38,11 @@ func NewExampleCommand() (*ExampleCommand, error) {
 // Run executes the example command.
 func (c *ExampleCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	// The settings struct is currently empty, but we initialize it for consistency.
 	s := &ExampleSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(values.DefaultSlug, s); err != nil {
 		return errors.Wrap(err, "failed to initialize settings")
 	}
 

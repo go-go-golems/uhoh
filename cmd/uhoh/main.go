@@ -66,31 +66,31 @@ func main() {
 	err := doc.AddDocToHelpSystem(helpSystem)
 	cobra.CheckErr(err)
 
-	err = clay.InitViper("uhoh", rootCmd)
+	err = clay.InitViper("uhoh", rootCmd) //nolint:staticcheck // InitGlazed replacement not yet available
 	cobra.CheckErr(err)
 
 	// Instantiate and build commands from the cmds package
 	exampleCmd, err := app_cmds.NewExampleCommand()
 	cobra.CheckErr(err)
-	cobraExampleCmd, err := cli.BuildCobraCommandFromBareCommand(exampleCmd)
+	cobraExampleCmd, err := cli.BuildCobraCommandFromCommand(exampleCmd)
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(cobraExampleCmd)
 
 	streamCmd, err := app_cmds.NewStreamCommand()
 	cobra.CheckErr(err)
-	cobraStreamCmd, err := cli.BuildCobraCommandFromBareCommand(streamCmd)
+	cobraStreamCmd, err := cli.BuildCobraCommandFromCommand(streamCmd)
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(cobraStreamCmd)
 
 	testStreamCmd, err := app_cmds.NewTestStreamCommand()
 	cobra.CheckErr(err)
-	cobraTestStreamCmd, err := cli.BuildCobraCommandFromBareCommand(testStreamCmd)
+	cobraTestStreamCmd, err := cli.BuildCobraCommandFromCommand(testStreamCmd)
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(cobraTestStreamCmd)
 
 	runWizardCmd, err := app_cmds.NewRunWizardCommand()
 	cobra.CheckErr(err)
-	cobraRunWizardCmd, err := cli.BuildCobraCommandFromBareCommand(runWizardCmd)
+	cobraRunWizardCmd, err := cli.BuildCobraCommandFromCommand(runWizardCmd)
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(cobraRunWizardCmd)
 

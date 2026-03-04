@@ -9,8 +9,8 @@ import (
 	"time"
 
 	glazed_cmds "github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -37,12 +37,12 @@ func NewTestStreamCommand() (*TestStreamCommand, error) {
 			"test-stream",
 			glazed_cmds.WithShort("Test stream command with simulated slow input"),
 			glazed_cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"error-behavior",
-					parameters.ParameterTypeChoice,
-					parameters.WithHelp("Error behavior during test stream"),
-					parameters.WithChoices("ignore", "debug", "exit"),
-					parameters.WithDefault("exit"),
+					fields.TypeChoice,
+					fields.WithHelp("Error behavior during test stream"),
+					fields.WithChoices("ignore", "debug", "exit"),
+					fields.WithDefault("exit"),
 				),
 			),
 		),
@@ -52,10 +52,10 @@ func NewTestStreamCommand() (*TestStreamCommand, error) {
 // Run executes the test stream simulation.
 func (c *TestStreamCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	s := &TestStreamSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(values.DefaultSlug, s); err != nil {
 		return errors.Wrap(err, "failed to initialize settings")
 	}
 

@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/uhoh/pkg/wizard"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -32,23 +32,23 @@ func NewRunWizardCommand() (*RunWizardCommand, error) {
 			"run-wizard",
 			cmds.WithShort("Run a wizard defined in a YAML file"),
 			cmds.WithArguments(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"wizard-file",
-					parameters.ParameterTypeString, // Assuming filename for now
-					parameters.WithHelp("Path to the wizard YAML file"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to the wizard YAML file"),
+					fields.WithRequired(true),
 				),
 			),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"initial-state",
-					parameters.ParameterTypeKeyValue,
-					parameters.WithHelp("Initial key-value state for the wizard"),
+					fields.TypeKeyValue,
+					fields.WithHelp("Initial key-value state for the wizard"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"initial-state-file",
-					parameters.ParameterTypeObjectFromFile,
-					parameters.WithHelp("File containing initial state for the wizard (JSON/YAML)"),
+					fields.TypeObjectFromFile,
+					fields.WithHelp("File containing initial state for the wizard (JSON/YAML)"),
 				),
 			),
 		),
@@ -57,10 +57,10 @@ func NewRunWizardCommand() (*RunWizardCommand, error) {
 
 func (c *RunWizardCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	s := &RunWizardSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(values.DefaultSlug, s); err != nil {
 		return errors.Wrap(err, "failed to initialize settings")
 	}
 
