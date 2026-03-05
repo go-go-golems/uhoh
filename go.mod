@@ -8,7 +8,7 @@ require (
 	github.com/charmbracelet/huh v0.6.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/expr-lang/expr v1.17.2
-	github.com/go-go-golems/clay v0.1.34
+	github.com/go-go-golems/clay v0.4.0
 	github.com/go-go-golems/glazed v1.0.4
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/profile v1.7.0
