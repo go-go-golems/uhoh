@@ -44,12 +44,12 @@ func (ss *SummaryStep) Execute(ctx context.Context, state map[string]interface{}
 	if len(ss.Sections) == 0 {
 		sb.WriteString("## Current State\n\n")
 		for k, v := range state {
-			sb.WriteString(fmt.Sprintf("- **%s**: %v\n", k, v))
+			fmt.Fprintf(&sb, "- **%s**: %v\n", k, v)
 		}
 	} else {
 		// Process each defined section
 		for _, section := range ss.Sections {
-			sb.WriteString(fmt.Sprintf("## %s\n\n", section.Title))
+			fmt.Fprintf(&sb, "## %s\n\n", section.Title)
 
 			if len(section.Fields) == 0 {
 				sb.WriteString("(No fields defined for this section)\n\n")
@@ -59,10 +59,10 @@ func (ss *SummaryStep) Execute(ctx context.Context, state map[string]interface{}
 			for _, field := range section.Fields {
 				value, exists := state[field]
 				if !exists {
-					sb.WriteString(fmt.Sprintf("- **%s**: %s\n", field, summaryFieldNotSetPlaceholder))
+					fmt.Fprintf(&sb, "- **%s**: %s\n", field, summaryFieldNotSetPlaceholder)
 					continue
 				}
-				sb.WriteString(fmt.Sprintf("- **%s**: %v\n", field, value))
+				fmt.Fprintf(&sb, "- **%s**: %v\n", field, value)
 			}
 			sb.WriteString("\n")
 		}
